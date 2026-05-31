@@ -140,7 +140,7 @@ export default function Footer() {
             gap: 12,
           }}
         >
-          <p style={{ fontSize: 13 }}>© 2026 Jejak. Seluruh hak dilindungi.</p>
+          <p style={{ fontSize: 13 }}>© 2026 Askala. Seluruh hak dilindungi.</p>
           <p style={{ fontSize: 13 }}>
             Dibuat dengan ❤️ untuk pendidikan Indonesia
           </p>

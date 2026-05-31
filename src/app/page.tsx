@@ -244,17 +244,22 @@ const stopDragging = () => {
             marginBottom: 28, border: "1px solid rgba(2,126,116,.2)",
           }}>
             <Zap size={13} />
-            Platform Digital Sekolah #1 Indonesia
+            Digitalisasi Bhumi Bhawikarsu
           </div>
-
-          <h1 style={{
-            fontSize: "clamp(38px, 6vw, 64px)", fontWeight: 800,
-            color: "var(--text-primary)", lineHeight: 1.1, marginBottom: 24,
-            letterSpacing: "-1px",
-          }}>
-            Jejak Setiap{" "}
-            <span style={{ color: "var(--primary)" }}>Prestasi.</span>
-          </h1>
+<h1
+  style={{
+    fontSize: "clamp(38px, 6vw, 64px)",
+    fontWeight: 800,
+    lineHeight: 1.1,
+    marginBottom: 24,
+    letterSpacing: "-1px",
+  }}
+>
+  Jejak Setiap{" "}
+  <span className="shimmer-text">
+    Prestasi.
+  </span>
+</h1>
 
           <p style={{
             fontSize: "clamp(15px, 2.5vw, 18px)", color: "#030303",
@@ -444,12 +449,51 @@ const stopDragging = () => {
     scale(1.06);
 }
 
+/* ========================= */
+/* SHIMMER TEXT */
+/* ========================= */
+
+@keyframes shimmerText {
+  0% {
+    background-position: -400% center;
+  }
+  100% {
+    background-position: 400% center;
+  }
+}
+
+.shimmer-text {
+  display: inline-block;
+
+  background: linear-gradient(
+    90deg,
+    #027E74 0%,
+    #027E74 35%,
+    #ffed89 50%,
+    #027E74 65%,
+    #027E74 100%
+  );
+
+  background-size: 400% 100%;
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+
+  animation: shimmerText 12.0s linear infinite;
+}
+  
 /* MOBILE */
 @media (max-width: 640px) {
   .hero-btn {
     width: 100%;
   }
+
 }
+
+
         `}</style>
 
       </section>
@@ -661,6 +705,7 @@ const stopDragging = () => {
       </section>
 
       {/* ── Features Bento Section ── */}
+{/* ── Features Bento Section ── */}
 <section
   id="features"
   style={{
@@ -717,7 +762,7 @@ const stopDragging = () => {
         gap: 20,
       }}
     >
-      {/* BIG CARD */}
+      {/* BIG CARD - Student Portfolio (NO IMAGE) */}
       <div
         className="card"
         style={{
@@ -730,7 +775,7 @@ const stopDragging = () => {
           textAlign: "center",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
+          justifyContent: "center",
         }}
       >
         <div>
@@ -774,19 +819,9 @@ const stopDragging = () => {
             satu tempat.
           </p>
         </div>
-
-        <img
-          src=""
-          alt="portfolio"
-          style={{
-            width: "100%",
-            maxWidth: 360,
-            margin: "24px auto 0",
-          }}
-        />
       </div>
 
-      {/* SMALL CARD */}
+      {/* SMALL CARD - Smart Cash (NO IMAGE) */}
       <div
         className="card"
         style={{
@@ -797,7 +832,7 @@ const stopDragging = () => {
           textAlign: "center",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
+          justifyContent: "center",
         }}
       >
         <div>
@@ -838,19 +873,9 @@ const stopDragging = () => {
             dengan transparan.
           </p>
         </div>
-
-        <img
-          src=""
-          alt="cash"
-          style={{
-            width: "100%",
-            maxWidth: 180,
-            margin: "20px auto 0",
-          }}
-        />
       </div>
 
-      {/* SMALL CARD */}
+      {/* SMALL CARD - Activity Tracker (NO IMAGE) */}
       <div
         className="card"
         style={{
@@ -861,7 +886,7 @@ const stopDragging = () => {
           textAlign: "center",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
+          justifyContent: "center",
         }}
       >
         <div>
@@ -902,19 +927,9 @@ const stopDragging = () => {
             secara realtime.
           </p>
         </div>
-
-        <img
-          src=""
-          alt="activity"
-          style={{
-            width: "100%",
-            maxWidth: 180,
-            margin: "20px auto 0",
-          }}
-        />
       </div>
 
-      {/* WIDE CARD */}
+      {/* WIDE CARD - Smart Notification (NO IMAGE) */}
       <div
         className="card"
         style={{
@@ -925,7 +940,7 @@ const stopDragging = () => {
           textAlign: "center",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
+          justifyContent: "center",
         }}
       >
         <div>
@@ -959,19 +974,9 @@ const stopDragging = () => {
             masuk ke semua siswa.
           </p>
         </div>
-
-        <img
-          src=""
-          alt="notif"
-          style={{
-            width: "100%",
-            maxWidth: 170,
-            margin: "18px auto 0",
-          }}
-        />
       </div>
 
-      {/* WIDE CARD */}
+      {/* WIDE CARD - One Dashboard Experience (WITH IMAGE) */}
       <div
         className="card"
         style={{
@@ -1029,12 +1034,15 @@ const stopDragging = () => {
           </p>
         </div>
 
+        {/* HANYA card ini yang punya gambar */}
         <img
-          src=""
-          alt="dashboard"
+          src="/dashboard.svg"
+          alt="Dashboard preview"
           style={{
             width: "100%",
-            maxWidth: 300,
+            maxWidth: 280,
+            borderRadius: 20,
+            objectFit: "cover",
           }}
         />
       </div>

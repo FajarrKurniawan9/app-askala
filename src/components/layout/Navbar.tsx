@@ -8,8 +8,8 @@ import {
 
 const navLinks = [
   { label: "Fitur", href: "#features" },
-  { label: "Dashboard", href: "#dashboard" },
   { label: "Testimonial", href: "#testimonial" },
+  { label: "About Us", href: "/about" },
 ];
 
 export default function Navbar() {

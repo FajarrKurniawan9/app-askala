@@ -7,79 +7,123 @@ import {
   ArrowRight, Activity,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { monthlyChartData } from "@/lib/mockData"; // chart tetap mock dulu
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
 import Link from "next/link";
-import { useAuthStore, getDisplayName } from "@/store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import api from "@/lib/api";
 import type { ApiStudent, ApiSubmission } from "@/lib/types";
 
-// ── Pie chart tetap static (tidak ada endpoint khusus) ─────────
-const pieData = [
-  { name: "Terverifikasi", value: 65 },
-  { name: "Pending", value: 25 },
-  { name: "Ditolak", value: 10 },
-];
 const PIE_COLORS = ["#10B981", "#F59E0B", "#DC2626"];
 
 export default function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuthStore();
-  const userName = getDisplayName(user);
+
+  // ── Solusi Nama Undefined: Validasi & Fallback Berlapis ──
+  const userName = user
+    ? (user.firstName || user.lastName
+      ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+      : user.email?.split("@")[0] || "Admin")
+    : "Admin";
 
   // ── State untuk data dari API ───────────────────────────────
   const [students, setStudents] = useState<ApiStudent[]>([]);
-  const [pendingPayments, setPendingPayments] = useState<ApiSubmission[]>([]);
+  const [allSubmissions, setAllSubmissions] = useState<ApiSubmission[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [loadingPayments, setLoadingPayments] = useState(true);
 
-  // ── Stat cards (angka dinamis dari data yg di-fetch) ────────
-  const totalStudents = students.length;
-  const totalPending = pendingPayments.length;
-
-  // ── Fetch students ──────────────────────────────────────────
+  // ── Fetch semua data siswa dari Backend ──────────────────────
   useEffect(() => {
     api.get<ApiStudent[]>("/students")
-      .then(res => setStudents(res.data))
+      .then(res => setStudents(res.data || []))
       .catch(() => setStudents([]))
       .finally(() => setLoadingStudents(false));
   }, []);
 
-  // ── Fetch pending submissions/payments ──────────────────────
+  // ── Fetch keseluruhan submission/pembayaran dari Backend ────
   useEffect(() => {
-    api.get<ApiSubmission[]>("/submissions?status=PENDING")
-      .then(res => setPendingPayments(res.data.slice(0, 5)))
-      .catch(() => setPendingPayments([]))
+    api.get<ApiSubmission[]>("/submissions")
+      .then(res => setAllSubmissions(res.data || []))
+      .catch(() => setAllSubmissions([]))
       .finally(() => setLoadingPayments(false));
   }, []);
 
-  // ── Handle verifikasi / tolak submission ────────────────────
+  // ── Handle Aksi Verifikasi Pembayaran ───────────────────────
   async function handleVerify(id: string) {
     try {
       await api.patch(`/submissions/${id}/verify`);
-      setPendingPayments(prev => prev.filter(p => p.id !== id));
+      setAllSubmissions(prev =>
+        prev.map(p => p.id === id ? { ...p, status: "VERIFIED" } : p)
+      );
     } catch {
       alert("Gagal memverifikasi. Coba lagi.");
     }
   }
 
+  // ── Handle Aksi Tolak Pembayaran ────────────────────────────
   async function handleReject(id: string) {
     try {
       await api.patch(`/submissions/${id}/reject`);
-      setPendingPayments(prev => prev.filter(p => p.id !== id));
+      setAllSubmissions(prev =>
+        prev.map(p => p.id === id ? { ...p, status: "REJECTED" } : p)
+      );
     } catch {
       alert("Gagal menolak. Coba lagi.");
     }
   }
 
+  // ── Pemrosesan Logika Statistik Dinamis (Live Backend) ─────
+  const totalStudents = students.length;
+
+  // Ambil antrian data pembayaran yang berstatus PENDING saja
+  const pendingPaymentsQueue = allSubmissions.filter(p => p.status === "PENDING");
+  const totalPending = pendingPaymentsQueue.length;
+
+  // Hitung Total Kas Masuk (Hanya menjumlahkan yang statusnya VERIFIED)
+  const totalKasMasuk = allSubmissions
+    .filter(p => p.status === "VERIFIED")
+    .reduce((sum, current) => sum + (current.bill?.amount || 0), 0);
+
+  // Total Transaksi Keseluruhan yang tercatat di backend
+  const totalTransaksiKeseluruhan = allSubmissions.length;
+
+  // ── Pemrosesan Data Pie Chart Dinamis ────────────────────────
+  const totalSubmissionsCount = allSubmissions.length || 1; // Menghindari pembagian dengan angka 0
+  const verifiedCount = allSubmissions.filter(p => p.status === "VERIFIED").length;
+  const rejectedCount = allSubmissions.filter(p => p.status === "REJECTED").length;
+
+  const pieData = [
+    { name: "Terverifikasi", value: Math.round((verifiedCount / totalSubmissionsCount) * 100) },
+    { name: "Pending", value: Math.round((totalPending / totalSubmissionsCount) * 100) },
+    { name: "Ditolak", value: Math.round((rejectedCount / totalSubmissionsCount) * 100) },
+  ];
+
+  // ── Pemrosesan Data Bar Chart Bulanan Otomatis (Tahun 2026) ──
+  const namaBulan = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+  const monthlyChartData = namaBulan.map((bulan, index) => {
+    // Filter transaksi yang sukses (VERIFIED) berdasarkan bulan dari field createdAt
+    const transaksiBulanIni = allSubmissions.filter(p => {
+      const date = new Date(p.createdAt);
+      return date.getMonth() === index && date.getFullYear() === 2026 && p.status === "VERIFIED";
+    });
+
+    const totalPemasukan = transaksiBulanIni.reduce((sum, item) => sum + (item.bill?.amount || 0), 0);
+
+    return {
+      bulan: bulan,
+      pemasukan: totalPemasukan,
+      pengeluaran: 0, // Set default 0 karena skema ApiSubmission fokus pada kas masuk/bukti bayar siswa
+    };
+  });
+
   const statCards = [
     { icon: Users, label: "Total Siswa", value: loadingStudents ? "..." : String(totalStudents), sub: "Siswa terdaftar", cls: "", href: "/admin/students" },
     { icon: AlertCircle, label: "Pembayaran Pending", value: loadingPayments ? "..." : String(totalPending), sub: "Perlu diverifikasi", cls: "card-stat-danger", href: "/admin/payments" },
-    { icon: TrendingUp, label: "Total Kas Masuk", value: "Rp 18,5jt", sub: "Bulan Mei 2026", cls: "card-stat-success", href: "/admin/treasury" },
-    { icon: CreditCard, label: "Transaksi Bulan Ini", value: "143", sub: "Total semua org", cls: "", href: "/admin/treasury" },
+    { icon: TrendingUp, label: "Total Kas Masuk", value: loadingPayments ? "..." : formatCurrency(totalKasMasuk), sub: "Akumulasi pembayaran riil", cls: "card-stat-success", href: "/admin/treasury" },
+    { icon: CreditCard, label: "Transaksi Keseluruhan", value: loadingPayments ? "..." : String(totalTransaksiKeseluruhan), sub: "Semua riwayat submit", cls: "", href: "/admin/treasury" },
   ];
 
   return (
@@ -104,7 +148,7 @@ export default function AdminDashboard() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
                   <p style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: ".05em" }}>{label}</p>
-                  <p style={{ fontSize: 28, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1, marginBottom: 6 }}>{value}</p>
+                  <p style={{ fontSize: 24, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1, marginBottom: 6 }}>{value}</p>
                   <p style={{ fontSize: 12, color: "var(--text-muted)" }}>{sub}</p>
                 </div>
                 <div style={{ width: 44, height: 44, background: "var(--primary-light)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -120,8 +164,8 @@ export default function AdminDashboard() {
           <div className="card" style={{ padding: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>Grafik Transaksi Bulanan</h3>
-                <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Pemasukan & pengeluaran kas 2026</p>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>Grafik Pemasukan Bulanan</h3>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Pemasukan kas real-time 2026</p>
               </div>
               <button className="btn btn-ghost btn-sm" style={{ display: "flex", alignItems: "center", gap: 5 }}>
                 <Download size={13} /> Export
@@ -131,15 +175,14 @@ export default function AdminDashboard() {
               <BarChart data={monthlyChartData} barGap={4}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="bulan" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000000}jt`} />
+                <YAxis tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(v) => `Rp ${v / 1000}k`} />
                 <Tooltip contentStyle={{ background: "#fff", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
                   formatter={(v) => formatCurrency(Number(v || 0))} cursor={{ fill: "rgba(2,126,116,.06)" }} />
                 <Bar dataKey="pemasukan" name="Pemasukan" fill="#027E74" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="pengeluaran" name="Pengeluaran" fill="#DC2626" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
             <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
-              {[{ color: "#027E74", label: "Pemasukan" }, { color: "#DC2626", label: "Pengeluaran" }].map(l => (
+              {[{ color: "#027E74", label: "Pemasukan Terverifikasi" }].map(l => (
                 <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <div style={{ width: 10, height: 10, borderRadius: 2, background: l.color }} />
                   <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{l.label}</span>
@@ -150,7 +193,7 @@ export default function AdminDashboard() {
 
           <div className="card" style={{ padding: 24 }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>Status Pembayaran</h3>
-            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>Distribusi bulan Mei 2026</p>
+            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>Distribusi data submit keseluruhan</p>
             <ResponsiveContainer width="100%" height={170}>
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" innerRadius={46} outerRadius={70} dataKey="value" paddingAngle={3}>
@@ -167,7 +210,7 @@ export default function AdminDashboard() {
                     <div style={{ width: 10, height: 10, borderRadius: 2, background: PIE_COLORS[i] }} />
                     <span style={{ fontSize: 13, color: "var(--text-body)" }}>{d.name}</span>
                   </div>
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>{d.value}%</span>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>{isNaN(d.value) ? 0 : d.value}%</span>
                 </div>
               ))}
             </div>
@@ -217,9 +260,9 @@ export default function AdminDashboard() {
               <tbody>
                 {loadingPayments ? (
                   <tr><td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--text-muted)" }}>Memuat data...</td></tr>
-                ) : pendingPayments.length === 0 ? (
+                ) : pendingPaymentsQueue.length === 0 ? (
                   <tr><td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--text-muted)" }}>Tidak ada pembayaran pending</td></tr>
-                ) : pendingPayments.map((p) => (
+                ) : pendingPaymentsQueue.slice(0, 5).map((p) => (
                   <tr key={p.id}>
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -227,7 +270,7 @@ export default function AdminDashboard() {
                           {p.student?.user?.firstName?.[0] ?? "?"}
                         </div>
                         <span style={{ fontWeight: 600, fontSize: 13 }}>
-                          {p.student?.user ? `${p.student.user.firstName} ${p.student.user.lastName}` : p.studentId}
+                          {p.student?.user ? `${p.student.user.firstName} ${p.student.user.lastName}` : "Siswa Askala"}
                         </span>
                       </div>
                     </td>
@@ -284,16 +327,18 @@ export default function AdminDashboard() {
               <tbody>
                 {loadingStudents ? (
                   <tr><td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--text-muted)" }}>Memuat data...</td></tr>
+                ) : students.length === 0 ? (
+                  <tr><td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--text-muted)" }}>Tidak ada data siswa</td></tr>
                 ) : students.slice(0, 5).map((s) => (
                   <tr key={s.id}>
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{ width: 32, height: 32, background: "var(--primary)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
-                          {s.user?.firstName?.[0] ?? "?"}{s.user?.lastName?.[0] ?? ""}
+                          {s.user?.firstName?.[0] ?? ""}{s.user?.lastName?.[0] ?? ""}
                         </div>
                         <div>
                           <p style={{ fontWeight: 600, fontSize: 13 }}>
-                            {s.user ? `${s.user.firstName} ${s.user.lastName}` : s.id}
+                            {s.user ? `${s.user.firstName} ${s.user.lastName}` : "Siswa Askala"}
                           </p>
                           <p style={{ fontSize: 11, color: "var(--text-muted)" }}>{s.user?.email ?? ""}</p>
                         </div>

@@ -9,6 +9,7 @@ import {
 import { authService } from "@/services/auth.service";
 import { useAuthStore, getRoleRedirect } from "@/store/authStore";
 import { toast } from "sonner";
+import api from "@/lib/api";
 
 export default function RegisterPage() {
   const [showPass, setShowPass] = useState(false);
@@ -43,32 +44,58 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      // 1️⃣ Register
+      // 🌟 SOLUSI DATA HYBRID: Mengirim properti gabungan `name` bersamaan dengan `firstName` & `lastName`
       await authService.register({
-        firstName, lastName, email, password, role,
+        name: `${firstName} ${lastName}`.trim(),
+        firstName,
+        lastName,
+        email,
+        password,
+        role,
         phone: phone.trim() || undefined,
         nis: role === "STUDENT" && nis.trim() ? nis.trim() : undefined,
       });
 
-      // 2️⃣ Login — backend hanya return { access_token }
+      // 2️⃣ Auto Login setelah registrasi berhasil
       const loginData = await authService.login({ email, password });
 
-      // 3️⃣ Simpan token agar interceptor bisa pakai untuk /auth/me
+      if (!loginData || !loginData.access_token) {
+        throw new Error("Pendaftaran sukses, namun gagal mengambil token sesi.");
+      }
+
+      // 3️⃣ Simpan token ke localStorage
       if (typeof window !== "undefined") {
         localStorage.setItem("askala_token", loginData.access_token);
       }
 
-      // 4️⃣ Ambil data user via /auth/me
+      // 🌟 SOLUSI ANTI-RACE CONDITION: Injeksi token langsung ke header default Axios sebelum hit profil
+      if (api.defaults.headers.common) {
+        api.defaults.headers.common["Authorization"] = `Bearer ${loginData.access_token}`;
+      }
+
+      // 4️⃣ Ambil data user via /auth/me menggunakan token baru
       const user = await authService.me();
+
+      if (!user) {
+        throw new Error("Gagal mengambil data profil baru.");
+      }
 
       // 5️⃣ Simpan ke Zustand store
       storeLogin(user, loginData.access_token);
-      toast.success(`Akun berhasil dibuat! Selamat datang, ${user.firstName}!`);
+
+      // 🌟 SOLUSI AMAN UNDEFINED TEXT: Fallback agar teks notifikasi tidak bertuliskan undefined
+      const regDisplayName = user.firstName || user?.name || user.email?.split("@")[0] || "Pengguna";
+      toast.success(`Akun berhasil dibuat! Selamat datang, ${regDisplayName}!`);
 
       // 6️⃣ Redirect sesuai role
-      window.location.href = getRoleRedirect(user.role);
+      if (user.role) {
+        window.location.href = getRoleRedirect(user.role);
+      } else {
+        window.location.href = "/dashboard";
+      }
 
     } catch (err: unknown) {
+      console.error("Register Error Log:", err);
       const axiosErr = err as { response?: { data?: { message?: string | string[] } } };
       const raw = axiosErr?.response?.data?.message;
       const msg = Array.isArray(raw)
@@ -133,7 +160,7 @@ export default function RegisterPage() {
 
       <div className="reg-auth-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: "100vh" }}>
         {/* ── LEFT PANEL ── */}
-        <div className="reg-auth-left" style={{ position: "relative", background: "url('/login-register/register.svg') center/cover no-repeat", display: "flex", flexDirection: "column", justifyContent: "flex-start", padding: "40px 48px", overflow: "hidden" }}>
+        <div className="reg-auth-left" style={{ position: "relative", background: "url('/login-register/register.svg') center/cover no-repeat", display: "flex", flexDirection: "column", justifycontent: "flex-start", padding: "40px 48px", overflow: "hidden" }}>
           <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: "radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none", position: "relative", zIndex: 2 }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,.12)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -287,7 +314,7 @@ export default function RegisterPage() {
 
             <p style={{ textAlign: "center", marginTop: 24, fontSize: 14, color: "#94A3B8", fontWeight: 400 }}>
               Sudah punya akun?{" "}
-              <Link href="/login" style={{ color: "#027E74", fontWeight: 700, textDecoration: "none" }}>Masuk</Link>
+              <Link href="/login" style={{ color: "#027E74", fontWeight: 700, textDecoration: "none" }} onMouseOver={e => (e.currentTarget.style.textDecoration = "underline")} onMouseOut={e => (e.currentTarget.style.textDecoration = "none")}>Login di sini</Link>
             </p>
           </motion.div>
         </div>

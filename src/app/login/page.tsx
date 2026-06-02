@@ -7,6 +7,7 @@ import { useAuthStore, getRoleRedirect } from "@/store/authStore";
 import { studentService } from "@/services/student.service";
 import { parentService } from "@/services/parent.service";
 import { toast } from "sonner";
+import api from "@/lib/api";
 import {
   BookOpen, Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, CheckCircle2,
 } from "lucide-react";
@@ -34,17 +35,33 @@ export default function LoginPage() {
       // 1️⃣ Login — backend hanya return { access_token }
       const data = await authService.login({ email, password });
 
-      // 2️⃣ Simpan token dulu agar interceptor bisa pakai untuk request berikutnya
+      if (!data || !data.access_token) {
+        throw new Error("Token otentikasi tidak ditemukan dari server.");
+      }
+
+      // 2️⃣ Simpan token dulu agar persist saat page reload
       if (typeof window !== "undefined") {
         localStorage.setItem("askala_token", data.access_token);
       }
 
-      // 3️⃣ Ambil data user via /auth/me menggunakan token yang baru disimpan
+      // 🌟 SOLUSI ANTI-RACE CONDITION: Injeksi token langsung ke header default Axios
+      if (api.defaults.headers.common) {
+        api.defaults.headers.common["Authorization"] = `Bearer ${data.access_token}`;
+      }
+
+      // 3️⃣ Ambil data user via /auth/me menggunakan token yang diinjeksi di atas
       const user = await authService.me();
+
+      if (!user) {
+        throw new Error("Gagal mengambil informasi profil akun Anda.");
+      }
 
       // 4️⃣ Simpan ke Zustand store
       storeLogin(user, data.access_token);
-      toast.success(`Selamat datang, ${user.firstName}!`);
+
+      // 🌟 SOLUSI AMAN UNDEFINED TEXT: Gunakan fallback berlapis untuk notifikasi ucapan selamat datang
+      const loginDisplayName = user.firstName || user.name || user.email?.split("@")[0] || "Pengguna";
+      toast.success(`Selamat datang kembali, ${loginDisplayName}!`);
 
       // 5️⃣ Resolve student/parent profile ID (non-critical)
       try {
@@ -60,10 +77,15 @@ export default function LoginPage() {
         // Non-critical — tidak memblokir login
       }
 
-      // 6️⃣ Redirect sesuai role
-      window.location.href = getRoleRedirect(user.role);
+      // 6️⃣ Redirect sesuai role secara aman
+      if (user.role) {
+        window.location.href = getRoleRedirect(user.role);
+      } else {
+        window.location.href = "/dashboard";
+      }
 
     } catch (err: unknown) {
+      console.error("Login Error Log:", err);
       const axiosErr = err as { response?: { data?: { message?: string | string[] } } };
       const raw = axiosErr?.response?.data?.message;
       const msg = Array.isArray(raw)

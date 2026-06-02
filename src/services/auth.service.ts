@@ -10,13 +10,14 @@ export interface LoginPayload {
 }
 
 export interface RegisterPayload {
+  name: string;
   firstName: string;
   lastName: string;
   email: string;
   password: string;
   role?: "ADMIN" | "STUDENT" | "PARENT";
   phone?: string;
-  nis?: string; // ← tambahan: Nomor Induk Siswa (opsional, hanya dikirim saat role STUDENT)
+  nis?: string;
 }
 
 export const authService = {

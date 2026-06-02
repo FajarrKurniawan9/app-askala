@@ -113,7 +113,6 @@ export interface ApiParent {
 // ─── Auth responses ───────────────────────────────────────────
 export interface LoginResponse {
   access_token: string;
-  user: ApiUser;
 }
 
 export interface RegisterResponse {

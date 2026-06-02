@@ -60,7 +60,7 @@ export default function LoginPage() {
       storeLogin(user, data.access_token);
 
       // 🌟 SOLUSI AMAN UNDEFINED TEXT: Gunakan fallback berlapis untuk notifikasi ucapan selamat datang
-      const loginDisplayName = user.firstName || user.name || user.email?.split("@")[0] || "Pengguna";
+      const loginDisplayName = user.firstName || user.lastName || user.email?.split("@")[0] || "Pengguna";
       toast.success(`Selamat datang kembali, ${loginDisplayName}!`);
 
       // 5️⃣ Resolve student/parent profile ID (non-critical)

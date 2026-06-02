@@ -1,15 +1,15 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Topbar from "@/components/layout/Topbar";
+import { useAuthStore } from "@/store/authStore";
 import {
   Users, Plus, Search, Eye, Edit2, Trash2,
   X, CheckCircle, UserPlus, Download, Trophy,
   BookOpen, Award, Calendar, ExternalLink,
 } from "lucide-react";
-import { mockStudents, mockAchievements, mockStudentOrgs, mockExtracurriculars } from "@/lib/mockData";
-import type { Student } from "@/lib/types";
-
-const KELAS_OPTIONS = ["Semua", "X-IPA 1", "X-IPA 2", "X-IPA 3", "X-IPS 1", "X-IPS 2", "XI-IPA 1", "XI-IPA 2", "XI-IPS 1", "XI-IPS 2", "XII-IPA 1", "XII-IPA 2", "XII-IPA 3", "XII-IPS 1"];
+import { studentService } from "@/services/student.service";
+import { toast } from "sonner";
+import type { ApiStudent } from "@/lib/types";
 
 type ModalMode = "add" | "edit" | "view" | "delete" | "portfolio" | null;
 
@@ -28,38 +28,72 @@ function Avatar({ name, bg = "var(--primary)", color = "#fff", size = 36 }: { na
 }
 
 export default function StudentsPage() {
+  const { user } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [search,  setSearch]  = useState("");
-  const [kelas,   setKelas]   = useState("Semua");
-  const [status,  setStatus]  = useState<"all" | "active" | "inactive">("all");
-  const [modal,   setModal]   = useState<ModalMode>(null);
-  const [selected, setSelected] = useState<Student | null>(null);
+  const [students, setStudents] = useState<ApiStudent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [kelas, setKelas] = useState("Semua");
+  const [modal, setModal] = useState<ModalMode>(null);
+  const [selected, setSelected] = useState<ApiStudent | null>(null);
+  const [form, setForm] = useState({ nis: "", kelas: "X-IPA 1", jurusan: "IPA", address: "" });
 
-  // Form state for add/edit
-  const [form, setForm] = useState({ name: "", nis: "", email: "", phone: "", kelas: "X-IPA 1", jurusan: "IPA", address: "" });
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const data = await studentService.getAll();
+      setStudents(data);
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal memuat data siswa");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const kelasOptions = useMemo(() => {
+    return ["Semua", ...new Set(students.map(s => s.kelas))];
+  }, [students]);
 
   const filtered = useMemo(() => {
-    return mockStudents.filter(s => {
-      const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
-                          s.nis.includes(search) ||
-                          s.email.toLowerCase().includes(search.toLowerCase());
-      const matchKelas  = kelas === "Semua" || s.kelas === kelas;
-      const matchStatus = status === "all" || s.status === status;
-      return matchSearch && matchKelas && matchStatus;
+    return students.filter(s => {
+      const matchSearch =
+        s.user?.firstName?.toLowerCase().includes(search.toLowerCase()) ||
+        s.user?.lastName?.toLowerCase().includes(search.toLowerCase()) ||
+        s.nis.includes(search) ||
+        s.user?.email?.toLowerCase().includes(search.toLowerCase());
+      const matchKelas = kelas === "Semua" || s.kelas === kelas;
+      return matchSearch && matchKelas;
     });
-  }, [search, kelas, status]);
+  }, [search, kelas, students]);
 
-  function openModal(mode: ModalMode, student?: Student) {
+  function openModal(mode: ModalMode, student?: ApiStudent) {
     setSelected(student ?? null);
     if (mode === "edit" && student) {
-      setForm({ name: student.name, nis: student.nis, email: student.email, phone: student.phone, kelas: student.kelas, jurusan: student.jurusan, address: student.address ?? "" });
+      setForm({ nis: student.nis, kelas: student.kelas, jurusan: student.jurusan ?? "IPA", address: student.address ?? "" });
     }
     if (mode === "add") {
-      setForm({ name: "", nis: "", email: "", phone: "", kelas: "X-IPA 1", jurusan: "IPA", address: "" });
+      setForm({ nis: "", kelas: "X-IPA 1", jurusan: "IPA", address: "" });
     }
     setModal(mode);
   }
+
   function closeModal() { setModal(null); setSelected(null); }
+
+  const handleDelete = async (id: string) => {
+    try {
+      await studentService.remove(id);
+      toast.success("Siswa dihapus");
+      setStudents(students.filter(s => s.id !== id));
+      closeModal();
+    } catch {
+      toast.error("Gagal menghapus siswa");
+    }
+  };
 
   return (
     <>
@@ -70,10 +104,10 @@ export default function StudentsPage() {
         {/* ── Stat Summary ──────────────────────────────────── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px,1fr))", gap: 14 }}>
           {[
-            { label: "Total Siswa",  value: mockStudents.length, cls: "",                  icon: Users },
-            { label: "Siswa Aktif",  value: mockStudents.filter(s=>s.status==="active").length,   cls: "card-stat-success", icon: CheckCircle },
-            { label: "Tidak Aktif",  value: mockStudents.filter(s=>s.status==="inactive").length, cls: "card-stat-danger",  icon: X },
-            { label: "Total Kelas",  value: "36", cls: "",                  icon: Users },
+            { label: "Total Siswa", value: students.length, cls: "", icon: Users },
+            { label: "Siswa Terdata", value: students.length, cls: "card-stat-success", icon: CheckCircle },
+            { label: "Loading", value: loading ? "..." : "Selesai", cls: "", icon: X },
+            { label: "Total Kelas", value: kelasOptions.length - 1, cls: "", icon: Users },
           ].map(({ label, value, cls, icon: Icon }) => (
             <div key={label} className={`card-stat ${cls}`}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -107,20 +141,8 @@ export default function StudentsPage() {
             <div style={{ position: "relative" }}>
               <select value={kelas} onChange={e => setKelas(e.target.value)}
                 className="form-input" style={{ paddingRight: 32, fontSize: 13, cursor: "pointer", minWidth: 130 }}>
-                {KELAS_OPTIONS.map(k => <option key={k}>{k}</option>)}
+                {kelasOptions.map(k => <option key={k}>{k}</option>)}
               </select>
-            </div>
-
-            {/* Status Tabs */}
-            <div style={{ display: "flex", gap: 4, background: "#f1f5f9", borderRadius: 8, padding: 3 }}>
-              {([["all","Semua"],["active","Aktif"],["inactive","Tidak Aktif"]] as const).map(([v, lbl]) => (
-                <button key={v} onClick={() => setStatus(v)} style={{
-                  padding: "5px 14px", borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: "pointer",
-                  background: status === v ? "#fff" : "transparent",
-                  color: status === v ? "var(--primary)" : "var(--text-muted)",
-                  border: status === v ? "1px solid var(--border)" : "none",
-                }}>{lbl}</button>
-              ))}
             </div>
 
             <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
@@ -135,7 +157,7 @@ export default function StudentsPage() {
 
           {/* Result count */}
           <div style={{ padding: "8px 20px", background: "#fafbfc", borderBottom: "1px solid var(--border)" }}>
-            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Menampilkan <strong>{filtered.length}</strong> dari <strong>{mockStudents.length}</strong> siswa</span>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Menampilkan <strong>{filtered.length}</strong> dari <strong>{students.length}</strong> siswa</span>
           </div>
 
           {/* Table */}
@@ -143,49 +165,48 @@ export default function StudentsPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Siswa</th><th>NIS</th><th>Kelas</th><th>Organisasi</th><th>Bergabung</th><th>Status</th><th>Aksi</th>
+                  <th>Siswa</th><th>NIS</th><th>Kelas</th><th>Jurusan</th><th>Status</th><th>Aksi</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={7} style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>
+                {loading ? (
+                  <tr><td colSpan={6} style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>
+                    Memuat data...
+                  </td></tr>
+                ) : filtered.length === 0 ? (
+                  <tr><td colSpan={6} style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>
                     <Users size={32} style={{ display: "block", margin: "0 auto 8px", opacity: .3 }} />
                     Tidak ada siswa yang ditemukan
                   </td></tr>
-                ) : filtered.map(s => (
-                  <tr key={s.id}>
-                    <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <Avatar name={s.name} />
-                        <div>
-                          <p style={{ fontWeight: 600, fontSize: 13, color: "var(--text-primary)" }}>{s.name}</p>
-                          <p style={{ fontSize: 11, color: "var(--text-muted)" }}>{s.email}</p>
+                ) : filtered.map(s => {
+                  const name = `${s.user?.firstName || ""} ${s.user?.lastName || ""}`.trim() || "N/A";
+                  return (
+                    <tr key={s.id}>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <Avatar name={name} />
+                          <div>
+                            <p style={{ fontWeight: 600, fontSize: 13, color: "var(--text-primary)" }}>{name}</p>
+                            <p style={{ fontSize: 11, color: "var(--text-muted)" }}>{s.user?.email || "N/A"}</p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "monospace" }}>{s.nis}</td>
-                    <td><span className="badge badge-primary">{s.kelas}</span></td>
-                    <td>
-                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                        {s.organizations.slice(0, 2).map(o => <span key={o} className="badge badge-gray">{o}</span>)}
-                        {s.organizations.length > 2 && <span className="badge badge-gray">+{s.organizations.length - 2}</span>}
-                      </div>
-                    </td>
-                    <td style={{ fontSize: 12, color: "var(--text-muted)" }}>{s.joinDate}</td>
-                    <td>
-                      {s.status === "active"
-                        ? <span className="badge badge-success"><CheckCircle size={10} />Aktif</span>
-                        : <span className="badge badge-gray">Tidak Aktif</span>}
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", gap: 5 }}>
-                        <button onClick={() => openModal("view", s)} className="btn btn-ghost btn-sm" style={{ padding: "5px 8px" }} title="Lihat Detail"><Eye size={13} /></button>
-                        <button onClick={() => openModal("edit", s)} className="btn btn-ghost btn-sm" style={{ padding: "5px 8px" }} title="Edit"><Edit2 size={13} /></button>
-                        <button onClick={() => openModal("delete", s)} className="btn btn-ghost btn-sm" style={{ padding: "5px 8px", color: "var(--danger)" }} title="Hapus"><Trash2 size={13} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "monospace" }}>{s.nis}</td>
+                      <td><span className="badge badge-primary">{s.kelas}</span></td>
+                      <td><span className="badge badge-gray">{s.jurusan || "N/A"}</span></td>
+                      <td>
+                        <span className="badge badge-success"><CheckCircle size={10} />Aktif</span>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", gap: 5 }}>
+                          <button onClick={() => openModal("view", s)} className="btn btn-ghost btn-sm" style={{ padding: "5px 8px" }} title="Lihat Detail"><Eye size={13} /></button>
+                          <button onClick={() => openModal("edit", s)} className="btn btn-ghost btn-sm" style={{ padding: "5px 8px" }} title="Edit"><Edit2 size={13} /></button>
+                          <button onClick={() => openModal("delete", s)} className="btn btn-ghost btn-sm" style={{ padding: "5px 8px", color: "var(--danger)" }} title="Hapus"><Trash2 size={13} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -223,31 +244,17 @@ export default function StudentsPage() {
             <form style={{ display: "flex", flexDirection: "column", gap: 14 }} onSubmit={e => { e.preventDefault(); closeModal(); }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label className="form-label">Nama Lengkap *</label>
-                  <input className="form-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ahmad Rizky Pratama" required />
-                </div>
-                <div>
                   <label className="form-label">NIS *</label>
                   <input className="form-input" value={form.nis} onChange={e => setForm(f => ({ ...f, nis: e.target.value }))} placeholder="2024001001" required />
                 </div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label className="form-label">Email</label>
-                  <input type="email" className="form-input" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="nama@student.sch.id" />
-                </div>
-                <div>
-                  <label className="form-label">No. HP</label>
-                  <input className="form-input" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="081234567890" />
-                </div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
                   <label className="form-label">Kelas *</label>
                   <select className="form-input" value={form.kelas} onChange={e => setForm(f => ({ ...f, kelas: e.target.value }))}>
-                    {KELAS_OPTIONS.filter(k => k !== "Semua").map(k => <option key={k}>{k}</option>)}
+                    {kelasOptions.filter(k => k !== "Semua").map(k => <option key={k}>{k}</option>)}
                   </select>
                 </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
                   <label className="form-label">Jurusan</label>
                   <select className="form-input" value={form.jurusan} onChange={e => setForm(f => ({ ...f, jurusan: e.target.value }))}>
@@ -278,129 +285,48 @@ export default function StudentsPage() {
               <h3 style={{ fontSize: 18, fontWeight: 700 }}>Detail Siswa</h3>
               <button onClick={closeModal} style={closeBtn}><X size={18} /></button>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 0", borderBottom: "1px solid var(--border)", marginBottom: 16 }}>
-              <Avatar name={selected.name} size={56} />
-              <div>
-                <p style={{ fontWeight: 700, fontSize: 16 }}>{selected.name}</p>
-                <p style={{ fontSize: 12, color: "var(--text-muted)" }}>{selected.email}</p>
-                <span className={`badge ${selected.status === "active" ? "badge-success" : "badge-gray"}`} style={{ marginTop: 4 }}>
-                  {selected.status === "active" ? "Aktif" : "Tidak Aktif"}
-                </span>
-              </div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-              {[
-                ["NIS",       selected.nis],
-                ["Kelas",     selected.kelas],
-                ["Jurusan",   selected.jurusan],
-                ["No. HP",    selected.phone],
-                ["Bergabung", selected.joinDate],
-                ["Organisasi",selected.organizations.join(", ") || "—"],
-              ].map(([lbl, val]) => (
-                <div key={lbl}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 2 }}>{lbl}</p>
-                  <p style={{ fontSize: 14, color: "var(--text-primary)" }}>{val}</p>
+            {selected.user && (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 0", borderBottom: "1px solid var(--border)", marginBottom: 16 }}>
+                  <Avatar name={`${selected.user.firstName} ${selected.user.lastName}`} size={56} />
+                  <div>
+                    <p style={{ fontWeight: 700, fontSize: 16 }}>{selected.user.firstName} {selected.user.lastName}</p>
+                    <p style={{ fontSize: 12, color: "var(--text-muted)" }}>{selected.user.email}</p>
+                    <span className="badge badge-success" style={{ marginTop: 4 }}>Aktif</span>
+                  </div>
                 </div>
-              ))}
-            </div>
-            <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button className="btn btn-primary" style={{ flex: 1, minWidth: 120, display: "flex", alignItems: "center", gap: 5 }}
-                onClick={() => setModal("portfolio")}>
-                <Trophy size={14} /> Lihat Portofolio
-              </button>
-              <button className="btn btn-outline" style={{ flex: 1, minWidth: 100 }} onClick={() => { setModal("edit"); setForm({ name: selected.name, nis: selected.nis, email: selected.email, phone: selected.phone, kelas: selected.kelas, jurusan: selected.jurusan, address: selected.address ?? "" }); }}>
-                <Edit2 size={14} /> Edit
-              </button>
-              <button className="btn btn-ghost" style={{ padding: "10px 14px" }} onClick={closeModal}><X size={16} /></button>
-            </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  {[
+                    ["NIS", selected.nis],
+                    ["Kelas", selected.kelas],
+                    ["Jurusan", selected.jurusan || "—"],
+                    ["No. HP", selected.user.phone || "—"],
+                    ["Alamat", selected.address || "—"],
+                  ].map(([lbl, val]) => (
+                    <div key={lbl}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 2 }}>{lbl}</p>
+                      <p style={{ fontSize: 14, color: "var(--text-primary)" }}>{val}</p>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button className="btn btn-outline" style={{ flex: 1, minWidth: 100 }} onClick={() => { setModal("edit"); setForm({ nis: selected.nis, kelas: selected.kelas, jurusan: selected.jurusan ?? "IPA", address: selected.address ?? "" }); }}>
+                    <Edit2 size={14} /> Edit
+                  </button>
+                  <button className="btn btn-ghost" style={{ padding: "10px 14px" }} onClick={closeModal}><X size={16} /></button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
 
-      {/* Portfolio Read-Only Modal */}
+      {/* Portfolio Read-Only Modal - DISABLED */}
+      {/*
       {modal === "portfolio" && selected && (
-        <div style={overlayStyle} onClick={() => setModal("view")}>
-          <div className="card" style={{ ...modalStyle, maxWidth: 640 }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div>
-                <h3 style={{ fontSize: 18, fontWeight: 700 }}>Portofolio – {selected.name}</h3>
-                <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>NIS {selected.nis} • {selected.kelas} • Read-Only</p>
-              </div>
-              <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center" }} onClick={() => setModal("view")}><X size={18} /></button>
-            </div>
-
-            {/* Achievements */}
-            <div style={{ marginBottom: 22 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <Trophy size={15} color="var(--primary)" />
-                <h4 style={{ fontSize: 14, fontWeight: 700 }}>Prestasi ({mockAchievements.filter(a => a.studentId === selected.id).length})</h4>
-              </div>
-              {mockAchievements.filter(a => a.studentId === selected.id).length === 0
-                ? <p style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic" }}>Belum ada prestasi tercatat</p>
-                : mockAchievements.filter(a => a.studentId === selected.id).map(a => (
-                  <div key={a.id} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--border)", alignItems: "flex-start" }}>
-                    <div style={{ width: 36, height: 36, background: "var(--primary-light)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Trophy size={16} color="var(--primary)" />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{a.title}</p>
-                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                        <span className={`badge ${CAT_COLOR[a.category] || "badge-gray"}`} style={{ fontSize: 11 }}>{a.category}</span>
-                        <span className="badge badge-gray" style={{ fontSize: 11 }}>{a.level}</span>
-                        <span className="badge badge-primary" style={{ fontSize: 11 }}>{a.position}</span>
-                      </div>
-                    </div>
-                    <span style={{ fontSize: 11, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
-                      <Calendar size={10} /> {a.date}
-                    </span>
-                  </div>
-                ))}
-            </div>
-
-            {/* Organisations */}
-            <div style={{ marginBottom: 22 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <Users size={15} color="var(--success)" />
-                <h4 style={{ fontSize: 14, fontWeight: 700 }}>Organisasi ({mockStudentOrgs.filter(o => o.studentId === selected.id).length})</h4>
-              </div>
-              {mockStudentOrgs.filter(o => o.studentId === selected.id).length === 0
-                ? <p style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic" }}>Belum ada organisasi tercatat</p>
-                : mockStudentOrgs.filter(o => o.studentId === selected.id).map(o => (
-                  <div key={o.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border)", alignItems: "center" }}>
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 600 }}>{o.orgName}</p>
-                      <p style={{ fontSize: 12, color: "var(--text-muted)" }}>{o.role} • Sejak {o.since}</p>
-                    </div>
-                    <span className={`badge ${o.isActive ? "badge-success" : "badge-gray"}`}>{o.isActive ? "Aktif" : "Selesai"}</span>
-                  </div>
-                ))}
-            </div>
-
-            {/* Eskul */}
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <BookOpen size={15} color="var(--warning)" />
-                <h4 style={{ fontSize: 14, fontWeight: 700 }}>Ekstrakurikuler ({mockExtracurriculars.filter(e => e.studentId === selected.id).length})</h4>
-              </div>
-              {mockExtracurriculars.filter(e => e.studentId === selected.id).length === 0
-                ? <p style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic" }}>Belum ada eskul tercatat</p>
-                : mockExtracurriculars.filter(e => e.studentId === selected.id).map(e => (
-                  <div key={e.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border)", alignItems: "center" }}>
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 600 }}>{e.name}</p>
-                      <p style={{ fontSize: 12, color: "var(--text-muted)" }}>{e.role}{e.coach ? ` • ${e.coach}` : ""} • Sejak {e.since}</p>
-                    </div>
-                    <span className={`badge ${e.isActive ? "badge-warning" : "badge-gray"}`}>{e.isActive ? "Aktif" : "Selesai"}</span>
-                  </div>
-                ))}
-            </div>
-
-            <div style={{ marginTop: 20, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
-              <button className="btn btn-ghost" style={{ width: "100%" }} onClick={() => setModal("view")}>Tutup</button>
-            </div>
-          </div>
-        </div>
+        // Portfolio functionality will be implemented in detail page
       )}
+      */}
 
       {/* Delete Confirm Modal */}
       {modal === "delete" && selected && (

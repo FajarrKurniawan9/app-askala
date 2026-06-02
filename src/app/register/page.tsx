@@ -84,7 +84,7 @@ export default function RegisterPage() {
       storeLogin(user, loginData.access_token);
 
       // 🌟 SOLUSI AMAN UNDEFINED TEXT: Fallback agar teks notifikasi tidak bertuliskan undefined
-      const regDisplayName = user.firstName || user?.name || user.email?.split("@")[0] || "Pengguna";
+      const regDisplayName = user.firstName || user.lastName || user.email?.split("@")[0] || "Pengguna";
       toast.success(`Akun berhasil dibuat! Selamat datang, ${regDisplayName}!`);
 
       // 6️⃣ Redirect sesuai role
@@ -160,7 +160,7 @@ export default function RegisterPage() {
 
       <div className="reg-auth-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: "100vh" }}>
         {/* ── LEFT PANEL ── */}
-        <div className="reg-auth-left" style={{ position: "relative", background: "url('/login-register/register.svg') center/cover no-repeat", display: "flex", flexDirection: "column", justifycontent: "flex-start", padding: "40px 48px", overflow: "hidden" }}>
+        <div className="reg-auth-left" style={{ position: "relative", background: "url('/login-register/register.svg') center/cover no-repeat", display: "flex", flexDirection: "column", justifyContent: "flex-start", padding: "40px 48px", overflow: "hidden" }}>
           <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: "radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none", position: "relative", zIndex: 2 }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,.12)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>

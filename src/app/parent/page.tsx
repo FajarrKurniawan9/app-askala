@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
+import Link from "next/link";
 import {
   Trophy, CreditCard, Clock, CheckCircle,
   AlertCircle, Calendar, TrendingUp, Eye, Bell,
@@ -158,7 +159,7 @@ export default function ParentDashboard() {
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>Riwayat Pembayaran</h3>
                 <p style={{ fontSize: 12, color: "var(--text-muted)" }}>Status iuran dan tagihan Ahmad Rizky</p>
               </div>
-              <a href="/parent/payments" className="btn btn-outline btn-sm">Lihat Semua</a>
+              <Link href="/parent/payments" className="btn btn-outline btn-sm">Lihat Semua</Link>
             </div>
             <div className="table-wrapper" style={{ border: "none", borderRadius: 0 }}>
               <table>

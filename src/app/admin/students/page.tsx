@@ -2,15 +2,21 @@
 import { useState, useMemo } from "react";
 import Topbar from "@/components/layout/Topbar";
 import {
-  Users, Plus, Search, Filter, Eye, Edit2, Trash2,
-  X, CheckCircle, ChevronDown, UserPlus, Download,
+  Users, Plus, Search, Eye, Edit2, Trash2,
+  X, CheckCircle, UserPlus, Download, Trophy,
+  BookOpen, Award, Calendar, ExternalLink,
 } from "lucide-react";
-import { mockStudents } from "@/lib/mockData";
+import { mockStudents, mockAchievements, mockStudentOrgs, mockExtracurriculars } from "@/lib/mockData";
 import type { Student } from "@/lib/types";
 
 const KELAS_OPTIONS = ["Semua", "X-IPA 1", "X-IPA 2", "X-IPA 3", "X-IPS 1", "X-IPS 2", "XI-IPA 1", "XI-IPA 2", "XI-IPS 1", "XI-IPS 2", "XII-IPA 1", "XII-IPA 2", "XII-IPA 3", "XII-IPS 1"];
 
-type ModalMode = "add" | "edit" | "view" | "delete" | null;
+type ModalMode = "add" | "edit" | "view" | "delete" | "portfolio" | null;
+
+const CAT_COLOR: Record<string, string> = {
+  Akademik: "badge-primary", Organisasi: "badge-success",
+  "Non-Akademik": "badge-warning", Olahraga: "badge-danger", Seni: "badge-warning",
+};
 
 function Avatar({ name, bg = "var(--primary)", color = "#fff", size = 36 }: { name: string; bg?: string; color?: string; size?: number }) {
   const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
@@ -297,11 +303,100 @@ export default function StudentsPage() {
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
-              <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => { setModal("edit"); setForm({ name: selected.name, nis: selected.nis, email: selected.email, phone: selected.phone, kelas: selected.kelas, jurusan: selected.jurusan, address: selected.address ?? "" }); }}>
+            <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button className="btn btn-primary" style={{ flex: 1, minWidth: 120, display: "flex", alignItems: "center", gap: 5 }}
+                onClick={() => setModal("portfolio")}>
+                <Trophy size={14} /> Lihat Portofolio
+              </button>
+              <button className="btn btn-outline" style={{ flex: 1, minWidth: 100 }} onClick={() => { setModal("edit"); setForm({ name: selected.name, nis: selected.nis, email: selected.email, phone: selected.phone, kelas: selected.kelas, jurusan: selected.jurusan, address: selected.address ?? "" }); }}>
                 <Edit2 size={14} /> Edit
               </button>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={closeModal}>Tutup</button>
+              <button className="btn btn-ghost" style={{ padding: "10px 14px" }} onClick={closeModal}><X size={16} /></button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Portfolio Read-Only Modal */}
+      {modal === "portfolio" && selected && (
+        <div style={overlayStyle} onClick={() => setModal("view")}>
+          <div className="card" style={{ ...modalStyle, maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 700 }}>Portofolio – {selected.name}</h3>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>NIS {selected.nis} • {selected.kelas} • Read-Only</p>
+              </div>
+              <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center" }} onClick={() => setModal("view")}><X size={18} /></button>
+            </div>
+
+            {/* Achievements */}
+            <div style={{ marginBottom: 22 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <Trophy size={15} color="var(--primary)" />
+                <h4 style={{ fontSize: 14, fontWeight: 700 }}>Prestasi ({mockAchievements.filter(a => a.studentId === selected.id).length})</h4>
+              </div>
+              {mockAchievements.filter(a => a.studentId === selected.id).length === 0
+                ? <p style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic" }}>Belum ada prestasi tercatat</p>
+                : mockAchievements.filter(a => a.studentId === selected.id).map(a => (
+                  <div key={a.id} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--border)", alignItems: "flex-start" }}>
+                    <div style={{ width: 36, height: 36, background: "var(--primary-light)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Trophy size={16} color="var(--primary)" />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{a.title}</p>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                        <span className={`badge ${CAT_COLOR[a.category] || "badge-gray"}`} style={{ fontSize: 11 }}>{a.category}</span>
+                        <span className="badge badge-gray" style={{ fontSize: 11 }}>{a.level}</span>
+                        <span className="badge badge-primary" style={{ fontSize: 11 }}>{a.position}</span>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+                      <Calendar size={10} /> {a.date}
+                    </span>
+                  </div>
+                ))}
+            </div>
+
+            {/* Organisations */}
+            <div style={{ marginBottom: 22 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <Users size={15} color="var(--success)" />
+                <h4 style={{ fontSize: 14, fontWeight: 700 }}>Organisasi ({mockStudentOrgs.filter(o => o.studentId === selected.id).length})</h4>
+              </div>
+              {mockStudentOrgs.filter(o => o.studentId === selected.id).length === 0
+                ? <p style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic" }}>Belum ada organisasi tercatat</p>
+                : mockStudentOrgs.filter(o => o.studentId === selected.id).map(o => (
+                  <div key={o.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border)", alignItems: "center" }}>
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 600 }}>{o.orgName}</p>
+                      <p style={{ fontSize: 12, color: "var(--text-muted)" }}>{o.role} • Sejak {o.since}</p>
+                    </div>
+                    <span className={`badge ${o.isActive ? "badge-success" : "badge-gray"}`}>{o.isActive ? "Aktif" : "Selesai"}</span>
+                  </div>
+                ))}
+            </div>
+
+            {/* Eskul */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <BookOpen size={15} color="var(--warning)" />
+                <h4 style={{ fontSize: 14, fontWeight: 700 }}>Ekstrakurikuler ({mockExtracurriculars.filter(e => e.studentId === selected.id).length})</h4>
+              </div>
+              {mockExtracurriculars.filter(e => e.studentId === selected.id).length === 0
+                ? <p style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic" }}>Belum ada eskul tercatat</p>
+                : mockExtracurriculars.filter(e => e.studentId === selected.id).map(e => (
+                  <div key={e.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border)", alignItems: "center" }}>
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 600 }}>{e.name}</p>
+                      <p style={{ fontSize: 12, color: "var(--text-muted)" }}>{e.role}{e.coach ? ` • ${e.coach}` : ""} • Sejak {e.since}</p>
+                    </div>
+                    <span className={`badge ${e.isActive ? "badge-warning" : "badge-gray"}`}>{e.isActive ? "Aktif" : "Selesai"}</span>
+                  </div>
+                ))}
+            </div>
+
+            <div style={{ marginTop: 20, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
+              <button className="btn btn-ghost" style={{ width: "100%" }} onClick={() => setModal("view")}>Tutup</button>
             </div>
           </div>
         </div>

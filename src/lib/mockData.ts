@@ -1,14 +1,103 @@
 /**
- * Centralized mock data for Askala / Jejak Admin Panel.
+ * Centralized mock data for Askala Admin Panel.
  * All data is static. Replace fetch calls with:
- *   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/students`)
+ *   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/...`)
  * when backend is ready.
  */
 
 import type {
   Student, Payment, Transaction, Activity, Organization,
   AdminProfile, SchoolInfo, NotificationSettings,
+  Achievement, StudentOrg, Extracurricular,
 } from "./types";
+
+// ─── Portfolio: Achievements ──────────────────────────────────
+export const mockAchievements: Achievement[] = [
+  {
+    id: "ach1", studentId: "s1",
+    title: "Juara 1 Olimpiade Matematika Tingkat Kabupaten",
+    description: "Kompetisi matematika antar SMA se-Kabupaten Malang yang diselenggarakan oleh Dinas Pendidikan Kota Malang.",
+    category: "Akademik", level: "Kabupaten/Kota", position: "Juara 1",
+    organizer: "Dinas Pendidikan Kab. Malang", date: "10 Mei 2026",
+    certificateUrl: "/certs/olimpiade-mat.pdf", createdAt: "2026-05-11T08:00:00Z",
+  },
+  {
+    id: "ach2", studentId: "s1",
+    title: "Juara 2 Lomba Debat Bahasa Inggris",
+    description: "Lomba debat bahasa Inggris antar SMA se-Kota Malang.",
+    category: "Akademik", level: "Kabupaten/Kota", position: "Juara 2",
+    organizer: "SMA Negeri 1 Malang", date: "20 Mar 2026",
+    certificateUrl: "/certs/debat-inggris.pdf", createdAt: "2026-03-21T08:00:00Z",
+  },
+  {
+    id: "ach3", studentId: "s1",
+    title: "Juara 3 Lomba Karya Ilmiah Remaja (KIR)",
+    description: "Presentasi penelitian tentang pengolahan sampah organik menjadi pupuk kompos.",
+    category: "Akademik", level: "Provinsi", position: "Juara 3",
+    organizer: "LIPI Jawa Timur", date: "08 Apr 2026",
+    certificateUrl: "/certs/kir-jatim.pdf", createdAt: "2026-04-09T08:00:00Z",
+  },
+  {
+    id: "ach4", studentId: "s1",
+    title: "Peserta Terbaik Pelatihan Kepemimpinan Nasional",
+    description: "Pelatihan kepemimpinan pemuda tingkat nasional yang diselenggarakan oleh Kemendikbud.",
+    category: "Organisasi", level: "Nasional", position: "Peserta Terbaik",
+    organizer: "Kemendikbud RI", date: "15 Feb 2026",
+    certificateUrl: "/certs/kepemimpinan.pdf", createdAt: "2026-02-16T08:00:00Z",
+  },
+  {
+    id: "ach5", studentId: "s1",
+    title: "Medali Perunggu Futsal Antar Sekolah",
+    description: "Turnamen futsal antar SMA se-Malang Raya dalam rangka HUT Kota Malang.",
+    category: "Olahraga", level: "Kabupaten/Kota", position: "Juara 3",
+    organizer: "KONI Kota Malang", date: "22 Jan 2026",
+    createdAt: "2026-01-23T08:00:00Z",
+  },
+];
+
+// ─── Portfolio: Student Organization Memberships ──────────────
+export const mockStudentOrgs: StudentOrg[] = [
+  {
+    id: "so1", studentId: "s1", orgName: "OSIS",
+    role: "Anggota Divisi Pendidikan",
+    since: "Januari 2026", isActive: true,
+    description: "Bertanggung jawab atas program literasi dan beasiswa internal sekolah.",
+    createdAt: "2026-01-02T08:00:00Z",
+  },
+  {
+    id: "so2", studentId: "s1", orgName: "Paskibra",
+    role: "Anggota Inti",
+    since: "Maret 2025", isActive: true,
+    description: "Bertugas sebagai petugas pengibar bendera dalam upacara resmi sekolah.",
+    createdAt: "2025-03-10T08:00:00Z",
+  },
+  {
+    id: "so3", studentId: "s1", orgName: "KIR",
+    role: "Sekretaris",
+    since: "Juli 2025", isActive: true,
+    description: "Mengelola administrasi dan dokumentasi kegiatan penelitian ilmiah remaja.",
+    createdAt: "2025-07-15T08:00:00Z",
+  },
+];
+
+// ─── Portfolio: Extracurriculars ──────────────────────────────
+export const mockExtracurriculars: Extracurricular[] = [
+  {
+    id: "ex1", studentId: "s1", name: "Futsal",
+    coach: "Pak Joko Widarto", role: "Pemain Tengah",
+    since: "Agustus 2024", isActive: true, createdAt: "2024-08-01T08:00:00Z",
+  },
+  {
+    id: "ex2", studentId: "s1", name: "English Debate Club",
+    coach: "Ibu Sarah Pratiwi", role: "Anggota",
+    since: "September 2024", isActive: true, createdAt: "2024-09-01T08:00:00Z",
+  },
+  {
+    id: "ex3", studentId: "s1", name: "Pramuka",
+    coach: "Pak Arief Subekti", role: "Anggota Penegak",
+    since: "Agustus 2023", until: "Juni 2025", isActive: false, createdAt: "2023-08-01T08:00:00Z",
+  },
+];
 
 // ─── Students ────────────────────────────────────────────────
 export const mockStudents: Student[] = [

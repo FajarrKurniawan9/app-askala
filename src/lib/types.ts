@@ -1,4 +1,56 @@
-// ─── Shared Types for Askala / Jejak Admin Panel ──────────────
+// ─── Shared Types for Askala Admin Panel ──────────────────────
+
+// ─── Portfolio – Achievement ───────────────────────────────────
+export type AchievementCategory = "Akademik" | "Non-Akademik" | "Organisasi" | "Olahraga" | "Seni";
+export type AchievementLevel    = "Sekolah" | "Kabupaten/Kota" | "Provinsi" | "Nasional" | "Internasional";
+
+export interface Achievement {
+  id: string;
+  studentId: string;
+  title: string;
+  description?: string;
+  category: AchievementCategory;
+  level: AchievementLevel;
+  position: string;          // e.g. "Juara 1", "Peserta Terbaik"
+  organizer: string;         // penyelenggara
+  date: string;
+  certificateUrl?: string;   // URL file sertifikat
+  createdAt: string;
+}
+
+// ─── Portfolio – Student Organization Membership ───────────────
+export interface StudentOrg {
+  id: string;
+  studentId: string;
+  orgName: string;           // nama organisasi
+  role: string;              // jabatan: Ketua / Anggota / Sekretaris
+  since: string;             // mulai bergabung
+  until?: string;            // hingga (null = masih aktif)
+  isActive: boolean;
+  description?: string;
+  createdAt: string;
+}
+
+// ─── Portfolio – Extracurricular ──────────────────────────────
+export interface Extracurricular {
+  id: string;
+  studentId: string;
+  name: string;
+  coach?: string;
+  role: string;
+  since: string;
+  until?: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+// ─── Portfolio aggregate (for admin read-only view) ───────────
+export interface StudentPortfolio {
+  studentId: string;
+  achievements: Achievement[];
+  organizations: StudentOrg[];
+  extracurriculars: Extracurricular[];
+}
 
 export type Role = "admin" | "student" | "parent";
 

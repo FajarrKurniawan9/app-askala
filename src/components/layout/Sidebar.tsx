@@ -37,8 +37,8 @@ const parentNav: NavItem[] = [
 
 const roleConfig = {
   student: { nav: studentNav, label: "Siswa", color: "var(--primary)", bg: "var(--primary-light)" },
-  admin:   { nav: adminNav,   label: "Admin",  color: "var(--danger)",  bg: "var(--danger-light)" },
-  parent:  { nav: parentNav,  label: "Orang Tua", color: "var(--warning)", bg: "var(--warning-light)" },
+  admin: { nav: adminNav, label: "Admin", color: "var(--danger)", bg: "var(--danger-light)" },
+  parent: { nav: parentNav, label: "Orang Tua", color: "var(--warning)", bg: "var(--warning-light)" },
 };
 
 interface SidebarProps {
@@ -87,7 +87,7 @@ export default function Sidebar({ role, userName = "Ahmad Rizky", sidebarOpen, s
             <span style={{
               fontFamily: "'Plus Jakarta Sans', sans-serif",
               fontWeight: 800, fontSize: 20, color: "var(--primary)",
-            }}>Jejak</span>
+            }}>Askala</span>
           </Link>
           <button
             className="btn btn-ghost btn-sm sidebar-close-btn"

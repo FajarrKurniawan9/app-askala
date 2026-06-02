@@ -1,12 +1,12 @@
 "use client";
-import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpen, LayoutDashboard, Trophy, CreditCard, Users,
-  TrendingUp, Bell, Settings, LogOut, Menu, X,
-  ChevronRight, User, Building, FileText,
+  TrendingUp, Settings, LogOut,
+  ChevronRight, User, FileText,
 } from "lucide-react";
+import { useAuthStore, getDisplayName } from "@/store/authStore";
 
 type NavItem = { label: string; href: string; icon: React.ElementType };
 
@@ -43,15 +43,23 @@ const roleConfig = {
 
 interface SidebarProps {
   role: "student" | "admin" | "parent";
-  userName?: string;
+  userName?: string; // optional override; defaults to authStore user
   sidebarOpen: boolean;
   setSidebarOpen: (v: boolean) => void;
 }
 
-export default function Sidebar({ role, userName = "Ahmad Rizky", sidebarOpen, setSidebarOpen }: SidebarProps) {
+export default function Sidebar({ role, userName: userNameProp, sidebarOpen, setSidebarOpen }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuthStore();
   const cfg = roleConfig[role];
   const { nav, label, color, bg } = cfg;
+  const userName = userNameProp ?? getDisplayName(user);
+
+  function handleLogout() {
+    logout();
+    router.push("/login");
+  }
 
   return (
     <>
@@ -94,7 +102,7 @@ export default function Sidebar({ role, userName = "Ahmad Rizky", sidebarOpen, s
             onClick={() => setSidebarOpen(false)}
             style={{ display: "none" }}
           >
-            <X size={18} />
+            ✕
           </button>
         </div>
 
@@ -156,10 +164,14 @@ export default function Sidebar({ role, userName = "Ahmad Rizky", sidebarOpen, s
               <p style={{ fontSize: 11, color: "var(--text-muted)" }}>{label}</p>
             </div>
           </div>
-          <Link href="/login" className="sidebar-link" style={{ color: "var(--danger)", marginTop: 2 }}>
+          <button
+            onClick={handleLogout}
+            className="sidebar-link"
+            style={{ color: "var(--danger)", marginTop: 2, background: "none", border: "none", width: "100%", cursor: "pointer", textAlign: "left" }}
+          >
             <LogOut size={16} />
             Keluar
-          </Link>
+          </button>
         </div>
       </aside>
 

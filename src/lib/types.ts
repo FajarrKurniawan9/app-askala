@@ -1,8 +1,128 @@
-// ─── Shared Types for Askala Admin Panel ──────────────────────
+// ─── Shared Types for Askala — aligned with backend API ───────────
 
-// ─── Portfolio – Achievement ───────────────────────────────────
+// Backend enums
+export type Role = "ADMIN" | "STUDENT" | "PARENT";
+export type AchievementType = "AKADEMIK" | "ORGANISASI" | "NON_AKADEMIK";
+export type AchievementLevel =
+  | "SEKOLAH"
+  | "KABUPATEN"
+  | "PROVINSI"
+  | "NASIONAL"
+  | "INTERNASIONAL";
+export type SubmissionStatus = "PENDING" | "VERIFIED" | "REJECTED";
+
+// ─── Frontend display helpers (mapped from backend enums) ──────
 export type AchievementCategory = "Akademik" | "Non-Akademik" | "Organisasi" | "Olahraga" | "Seni";
-export type AchievementLevel    = "Sekolah" | "Kabupaten/Kota" | "Provinsi" | "Nasional" | "Internasional";
+export type PaymentStatus = "pending" | "verified" | "rejected";
+export type ActivityStatus = "upcoming" | "ongoing" | "done";
+export type TransactionType = "in" | "out";
+export type StudentStatus = "active" | "inactive";
+
+// ─── Backend: User ────────────────────────────────────────────
+export interface ApiUser {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  role: Role;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Backend: Student ─────────────────────────────────────────
+export interface ApiStudent {
+  id: string;            // UUID
+  nis: string;
+  kelas: string;
+  jurusan?: string;
+  address?: string;
+  parentId?: string;
+  userId: number;
+  user: ApiUser;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Backend: Achievement ─────────────────────────────────────
+export interface ApiAchievement {
+  id: string;            // UUID
+  studentId: string;
+  title: string;
+  description?: string;
+  type: AchievementType;
+  level: AchievementLevel;
+  position: string;
+  organizer: string;
+  date: string;          // ISO date string
+  certificateUrl?: string;
+  isVerified: boolean;
+  student?: ApiStudent;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Backend: Organization ────────────────────────────────────
+export interface ApiOrganization {
+  id: string;            // UUID
+  name: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Backend: Bill (Tagihan) ──────────────────────────────────
+export interface ApiBill {
+  id: string;            // UUID
+  title: string;
+  amount: number;        // IDR integer
+  dueDate?: string;      // ISO date string
+  orgId?: string;
+  organization?: ApiOrganization;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Backend: Submission (Bukti Bayar) ────────────────────────
+export interface ApiSubmission {
+  id: string;            // UUID
+  billId: string;
+  studentId: string;
+  fileUrl: string;
+  note?: string;
+  status: SubmissionStatus;
+  verifiedBy?: string;   // numeric user ID as string
+  verifiedAt?: string;
+  bill?: ApiBill;
+  student?: ApiStudent;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Backend: Parent ──────────────────────────────────────────
+export interface ApiParent {
+  id: string;            // UUID
+  userId: number;
+  user: ApiUser;
+  students?: ApiStudent[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Auth responses ───────────────────────────────────────────
+export interface LoginResponse {
+  access_token: string;
+  user: ApiUser;
+}
+
+export interface RegisterResponse {
+  id: number;
+  email: string;
+  role: Role;
+}
+
+// ─── Legacy frontend types kept for UI compatibility ──────────
 
 export interface Achievement {
   id: string;
@@ -10,28 +130,27 @@ export interface Achievement {
   title: string;
   description?: string;
   category: AchievementCategory;
-  level: AchievementLevel;
-  position: string;          // e.g. "Juara 1", "Peserta Terbaik"
-  organizer: string;         // penyelenggara
+  level: string;
+  position: string;
+  organizer: string;
   date: string;
-  certificateUrl?: string;   // URL file sertifikat
+  certificateUrl?: string;
+  isVerified?: boolean;
   createdAt: string;
 }
 
-// ─── Portfolio – Student Organization Membership ───────────────
 export interface StudentOrg {
   id: string;
   studentId: string;
-  orgName: string;           // nama organisasi
-  role: string;              // jabatan: Ketua / Anggota / Sekretaris
-  since: string;             // mulai bergabung
-  until?: string;            // hingga (null = masih aktif)
+  orgName: string;
+  role: string;
+  since: string;
+  until?: string;
   isActive: boolean;
   description?: string;
   createdAt: string;
 }
 
-// ─── Portfolio – Extracurricular ──────────────────────────────
 export interface Extracurricular {
   id: string;
   studentId: string;
@@ -44,7 +163,6 @@ export interface Extracurricular {
   createdAt: string;
 }
 
-// ─── Portfolio aggregate (for admin read-only view) ───────────
 export interface StudentPortfolio {
   studentId: string;
   achievements: Achievement[];
@@ -52,14 +170,6 @@ export interface StudentPortfolio {
   extracurriculars: Extracurricular[];
 }
 
-export type Role = "admin" | "student" | "parent";
-
-export type PaymentStatus = "pending" | "verified" | "rejected";
-export type ActivityStatus = "upcoming" | "ongoing" | "done";
-export type TransactionType = "in" | "out";
-export type StudentStatus = "active" | "inactive";
-
-// ─── Student ──────────────────────────────────────────────────
 export interface Student {
   id: string;
   nis: string;
@@ -75,7 +185,6 @@ export interface Student {
   address?: string;
 }
 
-// ─── Payment ──────────────────────────────────────────────────
 export interface Payment {
   id: string;
   studentId: string;
@@ -93,7 +202,6 @@ export interface Payment {
   notes?: string;
 }
 
-// ─── Treasury ─────────────────────────────────────────────────
 export interface Transaction {
   id: string;
   type: TransactionType;
@@ -105,7 +213,6 @@ export interface Transaction {
   notes?: string;
 }
 
-// ─── Activity ─────────────────────────────────────────────────
 export interface Activity {
   id: string;
   name: string;
@@ -121,7 +228,6 @@ export interface Activity {
   budget?: number;
 }
 
-// ─── Organization ─────────────────────────────────────────────
 export interface Organization {
   id: string;
   name: string;
@@ -133,7 +239,6 @@ export interface Organization {
   since: string;
 }
 
-// ─── Admin Settings ───────────────────────────────────────────
 export interface AdminProfile {
   name: string;
   email: string;

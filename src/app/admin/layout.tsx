@@ -1,28 +1,30 @@
 "use client";
-import { useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
-import { AdminProvider } from "@/lib/adminContext";
+import { AdminProvider, useAdmin } from "@/lib/adminContext";
+import { useAuthStore, getDisplayName } from "@/store/authStore";
 
-/**
- * Shared Admin Layout — provides Sidebar + AdminContext for all /admin/* pages.
- * Each child page renders its own <Topbar> and receives setSidebarOpen via context.
- */
+function AdminInner({ children }: { children: React.ReactNode }) {
+  const { sidebarOpen, setSidebarOpen } = useAdmin();
+  const { user } = useAuthStore();
+  return (
+    <div style={{ display: "flex" }}>
+      <Sidebar
+        role="admin"
+        userName={getDisplayName(user)}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+      />
+      <div className="main-content" style={{ flex: 1, minWidth: 0 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   return (
     <AdminProvider>
-      <div style={{ display: "flex" }}>
-        <Sidebar
-          role="admin"
-          userName="Budi Santoso"
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-        />
-        <div className="main-content" style={{ flex: 1, minWidth: 0 }}>
-          {children}
-        </div>
-      </div>
+      <AdminInner>{children}</AdminInner>
     </AdminProvider>
   );
 }

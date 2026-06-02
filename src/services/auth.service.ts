@@ -1,39 +1,41 @@
 /**
- * Auth Service — wraps API calls for auth endpoints.
- * When backend is ready, these functions will hit real endpoints.
+ * Auth Service — POST /auth/login, /auth/register, /auth/me, /auth/logout
  */
 import api from "@/lib/api";
+import type { LoginResponse, RegisterResponse, ApiUser } from "@/lib/types";
 
-export interface LoginPayload  { email: string; password: string; }
-export interface RegisterPayload {
-  name: string;
+export interface LoginPayload {
   email: string;
   password: string;
-  role: "student" | "admin" | "parent";
-  nis?: string;
+}
+
+export interface RegisterPayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  role?: "ADMIN" | "STUDENT" | "PARENT";
+  phone?: string;
+  nis?: string; // ← tambahan: Nomor Induk Siswa (opsional, hanya dikirim saat role STUDENT)
 }
 
 export const authService = {
-  async login(payload: LoginPayload) {
-    // POST /api/auth/login
-    const res = await api.post("/auth/login", payload);
-    return res.data; // { user, token }
-  },
-
-  async register(payload: RegisterPayload) {
-    // POST /api/auth/register
-    const res = await api.post("/auth/register", payload);
+  async login(payload: LoginPayload): Promise<LoginResponse> {
+    const res = await api.post<LoginResponse>("/auth/login", payload);
     return res.data;
   },
 
-  async logout() {
-    // POST /api/auth/logout
+  async register(payload: RegisterPayload): Promise<RegisterResponse> {
+    const res = await api.post<RegisterResponse>("/auth/register", payload);
+    return res.data;
+  },
+
+  async me(): Promise<ApiUser> {
+    const res = await api.get<ApiUser>("/auth/me");
+    return res.data;
+  },
+
+  async logout(): Promise<void> {
     await api.post("/auth/logout").catch(() => null);
-  },
-
-  async me() {
-    // GET /api/auth/me
-    const res = await api.get("/auth/me");
-    return res.data;
   },
 };

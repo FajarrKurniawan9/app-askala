@@ -1,12 +1,12 @@
 "use client";
 import { useState } from "react";
 import { Bell, Menu, Search, ChevronDown } from "lucide-react";
+import { useAuthStore, getDisplayName } from "@/store/authStore";
 
 interface TopbarProps {
   title: string;
   subtitle?: string;
   role: "student" | "admin" | "parent";
-  userName?: string;
   setSidebarOpen: (v: boolean) => void;
 }
 
@@ -16,12 +16,19 @@ const notifications = [
   { text: "Prestasi baru berhasil ditambahkan", time: "3 jam lalu", read: true },
 ];
 
-export default function Topbar({ title, subtitle, role, userName = "Ahmad Rizky", setSidebarOpen }: TopbarProps) {
+export default function Topbar({ title, subtitle, role, setSidebarOpen }: TopbarProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const { user, logout } = useAuthStore();
+  const userName = getDisplayName(user);
   const unread = notifications.filter(n => !n.read).length;
 
   const roleColor = role === "admin" ? "var(--danger)" : role === "parent" ? "var(--warning)" : "var(--primary)";
+
+  function handleLogout() {
+    logout();
+    window.location.href = "/login";
+  }
 
   return (
     <header style={{
@@ -155,18 +162,31 @@ export default function Topbar({ title, subtitle, role, userName = "Ahmad Rizky"
             {[
               { label: "Profil Saya", href: `/${role}/profile` },
               { label: "Pengaturan", href: `/${role}/settings` },
-              { label: "Keluar", href: "/login", danger: true },
-            ].map(({ label, href, danger }) => (
+            ].map(({ label, href }) => (
               <a key={label} href={href} style={{
                 display: "block", padding: "10px 16px", fontSize: 13,
-                color: danger ? "var(--danger)" : "var(--text-body)",
-                textDecoration: "none", fontWeight: danger ? 600 : 400,
+                color: "var(--text-body)",
+                textDecoration: "none", fontWeight: 400,
                 transition: "background .12s",
               }}
                 onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
               >{label}</a>
             ))}
+            <button
+              onClick={handleLogout}
+              style={{
+                display: "block", width: "100%", textAlign: "left",
+                padding: "10px 16px", fontSize: 13,
+                color: "var(--danger)",
+                background: "none", border: "none", cursor: "pointer", fontWeight: 600,
+                transition: "background .12s",
+              }}
+              onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = "#fef2f2")}
+              onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = "transparent")}
+            >
+              Keluar
+            </button>
           </div>
         )}
       </div>

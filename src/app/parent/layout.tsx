@@ -1,15 +1,15 @@
 "use client";
 import Sidebar from "@/components/layout/Sidebar";
-import { StudentProvider, useStudent } from "@/lib/studentContext";
+import { ParentProvider, useParent } from "@/lib/parentContext";
 import { useAuthStore, getDisplayName } from "@/store/authStore";
 
-function StudentInner({ children }: { children: React.ReactNode }) {
-  const { sidebarOpen, setSidebarOpen } = useStudent();
+function ParentInner({ children }: { children: React.ReactNode }) {
+  const { sidebarOpen, setSidebarOpen } = useParent();
   const { user } = useAuthStore();
   return (
     <div style={{ display: "flex" }}>
       <Sidebar
-        role="student"
+        role="parent"
         userName={getDisplayName(user)}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
@@ -21,10 +21,10 @@ function StudentInner({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function StudentLayout({ children }: { children: React.ReactNode }) {
+export default function ParentLayout({ children }: { children: React.ReactNode }) {
   return (
-    <StudentProvider>
-      <StudentInner>{children}</StudentInner>
-    </StudentProvider>
+    <ParentProvider>
+      <ParentInner>{children}</ParentInner>
+    </ParentProvider>
   );
 }

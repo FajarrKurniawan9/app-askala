@@ -1,3 +1,4 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "sonner";
@@ -21,8 +22,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id">
-      <body>
+    <html lang="id" suppressHydrationWarning>
+      <body suppressHydrationWarning>
         {children}
         <Toaster
           position="bottom-right"

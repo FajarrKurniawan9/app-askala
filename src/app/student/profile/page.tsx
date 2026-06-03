@@ -23,7 +23,9 @@ export default function StudentProfilePage() {
   const [editing, setEditing]         = useState(false);
   const [saving, setSaving]           = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // Avatar langsung dari store — persist otomatis
+  const avatarUrl = user?.avatarUrl ?? null;
 
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", address: "" });
   const [pwModal, setPwModal] = useState(false);
@@ -48,7 +50,6 @@ export default function StudentProfilePage() {
         phone:     user.phone     ?? "",
         address:   studentData?.address ?? "",
       });
-      if (user.avatarUrl) setAvatarPreview(user.avatarUrl);
     }
   }, [user, studentData]);
 
@@ -57,21 +58,21 @@ export default function StudentProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     if (file.size > 5 * 1024 * 1024) { toast.error("Maksimal 5MB."); return; }
-    setAvatarPreview(URL.createObjectURL(file));
     setUploadingAvatar(true);
     try {
       const { fileUrl } = await uploadService.uploadFile(file);
-      const updated = await userService.update(user.id, { avatarUrl: fileUrl });
-      updateUser({ ...updated, avatarUrl: fileUrl });
-      setAvatarPreview(fileUrl);
+      await userService.update(user.id, { avatarUrl: fileUrl });
+      // Fetch ulang dari backend → tidak bergantung pada response PATCH
+      const fresh = await userService.getById(user.id);
+      updateUser(fresh);
       toast.success("Foto profil diperbarui!");
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string | string[] } } })?.response?.data?.message;
       const errMsg = Array.isArray(msg) ? msg.join(", ") : (msg ?? "Gagal mengunggah foto.");
       toast.error(errMsg);
-      setAvatarPreview(user.avatarUrl ?? null);
     } finally {
       setUploadingAvatar(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -81,13 +82,15 @@ export default function StudentProfilePage() {
     if (!user) return;
     setSaving(true);
     try {
-      const updated = await userService.update(user.id, {
+      await userService.update(user.id, {
         firstName: form.firstName.trim(),
         lastName:  form.lastName.trim(),
         email:     form.email.trim(),
         phone:     form.phone.trim() || undefined,
       });
-      updateUser(updated);
+      // Fetch ulang agar avatarUrl tidak hilang dari response PATCH
+      const fresh = await userService.getById(user.id);
+      updateUser(fresh);
       // Update address via student profile if changed
       if (studentProfileId && form.address !== studentData?.address) {
         await studentService.update(studentProfileId, { address: form.address.trim() || undefined });
@@ -149,8 +152,8 @@ export default function StudentProfilePage() {
           <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
             <div style={{ position: "relative", flexShrink: 0 }}>
               <div style={{ width: 96, height: 96, background: "var(--primary)", borderRadius: "50%", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 32 }}>
-                {avatarPreview
-                  ? <img src={avatarPreview} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                {avatarUrl
+                  ? <img src={avatarUrl} alt="avatar" key={avatarUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   : initials
                 }
               </div>

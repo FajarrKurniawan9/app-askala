@@ -31,11 +31,23 @@ export default function StudentPaymentsPage() {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    Promise.all([billService.getAll(), submissionService.getAll()])
-      .then(([b, s]) => { setBills(b); setSubmissions(s); })
+    if (!studentProfileId) {
+      // Tunggu studentProfileId resolved dulu setelah login
+      setLoading(false);
+      return;
+    }
+    Promise.all([
+      billService.getAll(),
+      submissionService.getAll(),
+    ])
+      .then(([b, s]) => {
+        setBills(b);
+        // Hanya tampilkan submission milik siswa ini
+        setSubmissions(s.filter(sub => sub.studentId === studentProfileId));
+      })
       .catch(() => toast.error("Gagal memuat data pembayaran."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [studentProfileId]);
 
   // Map bill to submission status for current student
   function getSubmission(billId: string): ApiSubmission | undefined {
@@ -60,6 +72,7 @@ export default function StudentPaymentsPage() {
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
     if (!file || !selectedBill) { toast.error("Pilih file terlebih dahulu!"); return; }
+    if (!studentProfileId) { toast.error("Sesi siswa tidak ditemukan. Coba login ulang."); return; }
     setUploading(true);
     try {
       const { fileUrl } = await uploadService.uploadFile(file);

@@ -137,6 +137,14 @@ export default function PortfolioPage() {
     e.preventDefault();
     if (!studentProfileId) return;
 
+    // Validasi client-side sebelum kirim ke backend
+    if (tab === "achievements") {
+      if (!achForm.title.trim())    { toast.error("Judul prestasi wajib diisi."); return; }
+      if (!achForm.position.trim()) { toast.error("Posisi / peringkat wajib diisi."); return; }
+      if (!achForm.organizer.trim()){ toast.error("Penyelenggara wajib diisi."); return; }
+      if (!achForm.date)            { toast.error("Tanggal wajib diisi."); return; }
+    }
+
     try {
       if (editItem) {
         if (tab === "achievements") {
@@ -508,7 +516,7 @@ export default function PortfolioPage() {
                   <div><label className="form-label">Posisi *</label><input className="form-input" required value={achForm.position} onChange={e => setAchForm(f => ({ ...f, position: e.target.value }))} placeholder="Juara 1" /></div>
                   <div><label className="form-label">Tanggal *</label><input type="date" className="form-input" required value={achForm.date} onChange={e => setAchForm(f => ({ ...f, date: e.target.value }))} /></div>
                 </div>
-                <div><label className="form-label">Penyelenggara</label><input className="form-input" value={achForm.organizer} onChange={e => setAchForm(f => ({ ...f, organizer: e.target.value }))} placeholder="Dinas Pendidikan" /></div>
+                <div><label className="form-label">Penyelenggara *</label><input className="form-input" required value={achForm.organizer} onChange={e => setAchForm(f => ({ ...f, organizer: e.target.value }))} placeholder="Dinas Pendidikan" /></div>
                 <div><label className="form-label">Deskripsi</label><textarea className="form-input" rows={3} value={achForm.description} onChange={e => setAchForm(f => ({ ...f, description: e.target.value }))} style={{ resize: "vertical" }} /></div>
                 <div style={{ display: "flex", gap: 10 }}>
                   <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => { setShowAdd(false); setEditItem(null); }}>Batal</button>

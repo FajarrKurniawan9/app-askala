@@ -19,7 +19,7 @@ import { mapAchievementType, mapAchievementLevel } from "@/lib/mappers";
 
 export default function StudentDashboard() {
   const { setSidebarOpen } = useStudent();
-  const { user } = useAuthStore();
+  const { user, studentProfileId } = useAuthStore();
 
   const [achievements, setAchievements] = useState<ApiAchievement[]>([]);
   const [bills, setBills] = useState<ApiBill[]>([]);
@@ -29,7 +29,9 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     Promise.all([
-      achievementService.getAll(),
+      studentProfileId
+        ? achievementService.getAll({ studentId: studentProfileId })
+        : Promise.resolve([] as typeof achievements),
       billService.getAll(),
       submissionService.getAll(),
       orgService.getAll(),
@@ -42,7 +44,7 @@ export default function StudentDashboard() {
       })
       .catch(() => toast.error("Gagal memuat data dashboard."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [studentProfileId]);
 
   const pendingBills = bills.filter(b => {
     const sub = submissions.find(s => s.billId === b.id);

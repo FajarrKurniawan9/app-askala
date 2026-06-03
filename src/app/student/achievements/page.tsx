@@ -79,6 +79,10 @@ export default function AchievementsPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!studentProfileId) {
+      toast.error("Profil siswa belum tersedia. Coba login ulang.");
+      return;
+    }
     setSaving(true);
     try {
       let certUrl: string | undefined;
@@ -287,8 +291,8 @@ export default function AchievementsPage() {
                 </div>
               </div>
               <div>
-                <label className="form-label">Penyelenggara</label>
-                <input className="form-input" value={form.organizer} onChange={e => setForm(f => ({ ...f, organizer: e.target.value }))} placeholder="Dinas Pendidikan" />
+                <label className="form-label">Penyelenggara *</label>
+                <input className="form-input" required value={form.organizer} onChange={e => setForm(f => ({ ...f, organizer: e.target.value }))} placeholder="Dinas Pendidikan" />
               </div>
               <div>
                 <label className="form-label">Deskripsi</label>

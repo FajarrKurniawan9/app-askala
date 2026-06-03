@@ -18,24 +18,25 @@ export default function AdminProfilePage() {
   const { user, updateUser } = useAuthStore();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [editing, setEditing]   = useState(false);
+  const [editing, setEditing]             = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [showPwModal, setShowPwModal] = useState(false);
-  const [savingPw, setSavingPw] = useState(false);
+  const [showPwModal, setShowPwModal]     = useState(false);
+  const [savingPw, setSavingPw]           = useState(false);
 
   const [form, setForm] = useState({
-    firstName: user?.firstName ?? "",
-    lastName:  user?.lastName  ?? "",
-    email:     user?.email     ?? "",
-    phone:     user?.phone     ?? "",
+    firstName: "",
+    lastName:  "",
+    email:     "",
+    phone:     "",
   });
-
   const [pwForm, setPwForm] = useState({ newPw: "", confirm: "" });
   const [showPw, setShowPw] = useState({ newPw: false, confirm: false });
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatarUrl ?? null);
-  const [pendingAvatarUrl, setPendingAvatarUrl] = useState<string | null>(null);
 
+  // Sumber kebenaran avatar: langsung dari user di store (sudah persist)
+  const avatarUrl = user?.avatarUrl ?? null;
+
+  // Sync form ketika user berubah (rehydrate atau setelah update)
   useEffect(() => {
     if (user) {
       setForm({
@@ -44,7 +45,6 @@ export default function AdminProfilePage() {
         email:     user.email     ?? "",
         phone:     user.phone     ?? "",
       });
-      if (user.avatarUrl) setAvatarPreview(user.avatarUrl);
     }
   }, [user]);
 
@@ -56,43 +56,45 @@ export default function AdminProfilePage() {
     ? new Date(user.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
     : "—";
 
+  // ── Avatar upload ───────────────────────────────────────────
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
     if (file.size > 5 * 1024 * 1024) { toast.error("Ukuran file maksimal 5MB."); return; }
-    setAvatarPreview(URL.createObjectURL(file));
     setUploadingAvatar(true);
     try {
+      // 1. Upload file → dapat URL
       const { fileUrl } = await uploadService.uploadFile(file);
-      setPendingAvatarUrl(fileUrl);
-      // Langsung simpan ke database
-      if (user) {
-        const updated = await userService.update(user.id, { avatarUrl: fileUrl });
-        updateUser({ ...updated, avatarUrl: fileUrl });
-        setAvatarPreview(fileUrl);
-      }
+      // 2. Simpan URL ke backend via PATCH /users/:id
+      await userService.update(user.id, { avatarUrl: fileUrl });
+      // 3. Fetch ulang data user dari backend → pastikan avatarUrl tersimpan
+      const fresh = await userService.getById(user.id);
+      updateUser(fresh);
       toast.success("Foto profil berhasil diperbarui!");
     } catch {
       toast.error("Gagal mengunggah foto.");
-      setAvatarPreview(user?.avatarUrl ?? null);
     } finally {
       setUploadingAvatar(false);
-      setPendingAvatarUrl(null);
+      // Reset input agar file yang sama bisa diupload lagi
+      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
+  // ── Save profile ────────────────────────────────────────────
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
     setSavingProfile(true);
     try {
-      const updated = await userService.update(user.id, {
+      await userService.update(user.id, {
         firstName: form.firstName.trim(),
         lastName:  form.lastName.trim(),
         email:     form.email.trim(),
         phone:     form.phone.trim() || undefined,
       });
-      updateUser(updated);
+      // Fetch ulang agar avatarUrl tidak ikut hilang
+      const fresh = await userService.getById(user.id);
+      updateUser(fresh);
       setEditing(false);
       toast.success("Profil berhasil disimpan!");
     } catch {
@@ -102,6 +104,7 @@ export default function AdminProfilePage() {
     }
   }
 
+  // ── Change password ─────────────────────────────────────────
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
     if (pwForm.newPw !== pwForm.confirm) { toast.error("Konfirmasi password tidak cocok."); return; }
@@ -128,7 +131,6 @@ export default function AdminProfilePage() {
 
         {/* ── Hero Card ──────────────────────────────────────── */}
         <div className="card" style={{ overflow: "hidden" }}>
-          {/* Banner gradient */}
           <div style={{
             height: 120,
             background: "linear-gradient(135deg, var(--primary) 0%, #02635c 50%, #014d47 100%)",
@@ -141,26 +143,28 @@ export default function AdminProfilePage() {
             }} />
           </div>
 
-          {/* Avatar + info row */}
           <div style={{ padding: "0 28px 28px", position: "relative" }}>
-            {/* Avatar */}
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+              {/* Avatar */}
               <div style={{ position: "relative", marginTop: -48 }}>
                 <div style={{
                   width: 96, height: 96, borderRadius: "50%",
-                  border: "4px solid #fff",
-                  background: "var(--primary)",
+                  border: "4px solid #fff", background: "var(--primary)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  overflow: "hidden",
-                  boxShadow: "0 4px 16px rgba(0,0,0,.15)",
+                  overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,.15)",
                 }}>
-                  {avatarPreview ? (
-                    <img src={avatarPreview} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt="avatar"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      // Cache-bust jika URL sama tapi konten berubah
+                      key={avatarUrl}
+                    />
                   ) : (
                     <span style={{ color: "#fff", fontWeight: 800, fontSize: 32 }}>{initials}</span>
                   )}
                 </div>
-                {/* Camera button */}
                 <button
                   onClick={() => fileRef.current?.click()}
                   disabled={uploadingAvatar}
@@ -178,7 +182,13 @@ export default function AdminProfilePage() {
                     : <Camera size={13} color="#fff" />
                   }
                 </button>
-                <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: "none" }} onChange={handleAvatarChange} />
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  style={{ display: "none" }}
+                  onChange={handleAvatarChange}
+                />
               </div>
 
               {/* Action buttons */}
@@ -200,7 +210,6 @@ export default function AdminProfilePage() {
               </div>
             </div>
 
-            {/* Name + badges */}
             <div style={{ marginTop: 14 }}>
               <h2 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 }}>{displayName}</h2>
               <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 12 }}>{user?.email}</p>
@@ -229,13 +238,12 @@ export default function AdminProfilePage() {
             </div>
 
             {!editing ? (
-              /* ── Read mode ── */
               <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                 {[
-                  { icon: User,  label: "Nama Depan",   value: user?.firstName || "—" },
+                  { icon: User,  label: "Nama Depan",    value: user?.firstName || "—" },
                   { icon: User,  label: "Nama Belakang", value: user?.lastName  || "—" },
-                  { icon: Mail,  label: "Email",         value: user?.email     || "—" },
-                  { icon: Phone, label: "No. HP",        value: user?.phone     || "Belum diisi" },
+                  { icon: Mail,  label: "Email",          value: user?.email    || "—" },
+                  { icon: Phone, label: "No. HP",         value: user?.phone    || "Belum diisi" },
                 ].map(({ icon: Icon, label, value }, i, arr) => (
                   <div key={label} style={{
                     display: "flex", alignItems: "center", gap: 16,
@@ -258,7 +266,6 @@ export default function AdminProfilePage() {
                 </div>
               </div>
             ) : (
-              /* ── Edit mode ── */
               <form onSubmit={handleSaveProfile} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                   <div>
@@ -301,14 +308,13 @@ export default function AdminProfilePage() {
           {/* Right sidebar */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-            {/* Account stats */}
             <div className="card" style={{ padding: 20 }}>
               <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: "var(--text-primary)" }}>Ringkasan Akun</h4>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {[
-                  { label: "Role",      value: user?.role ?? "ADMIN",  color: "var(--danger)" },
-                  { label: "Status",    value: "Aktif",                color: "var(--success)" },
-                  { label: "User ID",   value: `#${user?.id ?? "—"}`,  color: "var(--primary)" },
+                  { label: "Role",    value: user?.role ?? "ADMIN", color: "var(--danger)" },
+                  { label: "Status",  value: "Aktif",               color: "var(--success)" },
+                  { label: "User ID", value: `#${user?.id ?? "—"}`, color: "var(--primary)" },
                 ].map(({ label, value, color }) => (
                   <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{label}</span>
@@ -334,8 +340,8 @@ export default function AdminProfilePage() {
                 border: "3px solid var(--border)",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                {avatarPreview
-                  ? <img src={avatarPreview} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                {avatarUrl
+                  ? <img src={avatarUrl} alt="avatar" key={avatarUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   : <ImageIcon size={32} color="var(--text-muted)" />
                 }
               </div>

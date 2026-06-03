@@ -81,7 +81,7 @@ export default function ParentActivitiesPage() {
       }
     }
     load();
-  }, [user, parentProfileId, setParentProfileId]);
+  }, [user?.id, parentProfileId]);
 
   const activeOrgs   = orgs.filter((o) => o.isActive);
   const pendingCount = submissions.filter((s) => s.status === "PENDING").length;

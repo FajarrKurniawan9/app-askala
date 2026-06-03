@@ -191,8 +191,8 @@ export default function StudentsPage() {
       const newStudent = await studentService.create({
         nis:       addForm.nis.trim(),
         classRoom: addForm.classRoom.trim(),
-        major:     addForm.major || undefined,
-        grade:     addForm.grade || undefined,
+        major:     addForm.major || "IPA",   // backend requires this field
+        grade:     addForm.grade || "X",     // backend requires this field
         address:   addForm.address.trim() || undefined,
         userId:    newUser.id,
       });

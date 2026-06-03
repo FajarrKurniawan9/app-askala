@@ -1,6 +1,6 @@
 /**
  * Bill Service — CRUD /bills & /bills/{id}
- * Replaces the old payment.service.ts pattern.
+ * NOTE from Swagger: dueDate is REQUIRED by CreateBillDto
  */
 import api from "@/lib/api";
 import type { ApiBill } from "@/lib/types";
@@ -8,7 +8,8 @@ import type { ApiBill } from "@/lib/types";
 export interface CreateBillPayload {
   title: string;
   amount: number;   // positive integer, IDR
-  dueDate?: string; // ISO date string
+  dueDate: string;  // ISO date string — REQUIRED by backend
+  description?: string;
   orgId?: string;   // UUID of linked organization
 }
 
@@ -16,6 +17,7 @@ export interface UpdateBillPayload {
   title?: string;
   amount?: number;
   dueDate?: string;
+  description?: string;
   orgId?: string;
 }
 

@@ -142,6 +142,7 @@ export default function BillsPage() {
     if (!form.title.trim()) return "Nama tagihan wajib diisi.";
     const amt = Number(form.amount);
     if (!form.amount || isNaN(amt) || amt <= 0) return "Nominal harus berupa angka positif.";
+    if (!form.dueDate) return "Jatuh tempo wajib diisi.";
     return null;
   }
 
@@ -155,7 +156,7 @@ export default function BillsPage() {
       const payload: CreateBillPayload = {
         title:   form.title.trim(),
         amount:  Number(form.amount),
-        dueDate: form.dueDate || undefined,
+        dueDate: new Date(form.dueDate).toISOString(),  // backend requires ISO
         orgId:   form.orgId  || undefined,
       };
       const created = await billService.create(payload);
@@ -180,7 +181,7 @@ export default function BillsPage() {
       const payload: UpdateBillPayload = {
         title:   form.title.trim(),
         amount:  Number(form.amount),
-        dueDate: form.dueDate || undefined,
+        dueDate: form.dueDate ? new Date(form.dueDate).toISOString() : undefined,
         orgId:   form.orgId  || undefined,
       };
       const updated = await billService.update(selected.id, payload);
@@ -402,10 +403,10 @@ export default function BillsPage() {
               {/* Due date + Org */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label className="form-label">Jatuh Tempo</label>
+                  <label className="form-label">Jatuh Tempo *</label>
                   <div style={{ position: "relative" }}>
                     <Calendar size={13} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-                    <input type="date" className="form-input" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} style={{ paddingLeft: 34 }} />
+                    <input type="date" className="form-input" required value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} style={{ paddingLeft: 34 }} />
                   </div>
                 </div>
                 <div>

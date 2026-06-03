@@ -7,17 +7,19 @@ import type { ApiStudent } from "@/lib/types";
 
 export interface CreateStudentPayload {
   nis: string;
-  kelas: string;
+  classRoom: string;   // Prisma field name
   userId: number;
-  jurusan?: string;
+  major?: string;      // Prisma field name
+  grade?: string;
   address?: string;
   parentId?: string;
 }
 
 export interface UpdateStudentPayload {
   nis?: string;
-  kelas?: string;
-  jurusan?: string;
+  classRoom?: string;  // Prisma field name
+  major?: string;      // Prisma field name
+  grade?: string;
   address?: string;
   parentId?: string;
   // activities and extracurriculars are stored as nested data

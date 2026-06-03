@@ -19,7 +19,7 @@ const statusConf: Record<SubmissionStatus, { label: string; cls: string; icon: R
 
 export default function StudentPaymentsPage() {
   const { setSidebarOpen } = useStudent();
-  const { user } = useAuthStore();
+  const { user, studentProfileId } = useAuthStore();
 
   const [bills, setBills] = useState<ApiBill[]>([]);
   const [submissions, setSubmissions] = useState<ApiSubmission[]>([]);
@@ -72,7 +72,7 @@ export default function StudentPaymentsPage() {
         // First submission
         const created = await submissionService.create({
           billId: selectedBill.id,
-          studentId: "", // backend resolves from auth token
+          studentId: studentProfileId ?? "",
           fileUrl,
         });
         setSubmissions(prev => [...prev, created]);
@@ -159,7 +159,7 @@ export default function StudentPaymentsPage() {
                   return (
                     <tr key={bill.id}>
                       <td style={{ fontWeight: 500, color: "var(--text-primary)" }}>{bill.title}</td>
-                      <td><span className="badge badge-primary">{bill.organization?.name ?? "—"}</span></td>
+                      <td><span className="badge badge-primary">{bill.org?.name ?? bill.organization?.name ?? "—"}</span></td>
                       <td style={{ fontWeight: 700 }}>{formatCurrency(bill.amount)}</td>
                       <td><span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13 }}><Calendar size={12} color="var(--text-muted)" />{bill.dueDate?.split("T")[0] ?? "—"}</span></td>
                       <td><span className={`badge ${conf.cls}`}><Icon size={11} />{conf.label}</span></td>

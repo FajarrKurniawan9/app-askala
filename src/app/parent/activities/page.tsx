@@ -24,7 +24,7 @@ export default function ParentActivitiesPage() {
     <div style={{ display: "flex" }}>
       <Sidebar role="parent" userName="Ibu Kartini" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <div className="main-content" style={{ flex: 1 }}>
-        <Topbar title="Aktivitas Anak" subtitle="Pantau kegiatan dan pencapaian Ahmad Rizky" role="parent" userName="Ibu Kartini" setSidebarOpen={setSidebarOpen} />
+        <Topbar title="Aktivitas Anak" subtitle="Pantau kegiatan dan pencapaian Ahmad Rizky" role="parent" setSidebarOpen={setSidebarOpen} />
 
         <main style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
 

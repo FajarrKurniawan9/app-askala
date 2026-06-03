@@ -54,7 +54,10 @@ export default function AdminDashboard() {
   // ── Handle Aksi Verifikasi Pembayaran ───────────────────────
   async function handleVerify(id: string) {
     try {
-      await api.patch(`/submissions/${id}/verify`);
+      await api.patch(`/submissions/${id}`, {
+        status: "VERIFIED",
+        verifiedBy: String(user?.id ?? ""),
+      });
       setAllSubmissions(prev =>
         prev.map(p => p.id === id ? { ...p, status: "VERIFIED" } : p)
       );
@@ -66,7 +69,9 @@ export default function AdminDashboard() {
   // ── Handle Aksi Tolak Pembayaran ────────────────────────────
   async function handleReject(id: string) {
     try {
-      await api.patch(`/submissions/${id}/reject`);
+      await api.patch(`/submissions/${id}`, {
+        status: "REJECTED",
+      });
       setAllSubmissions(prev =>
         prev.map(p => p.id === id ? { ...p, status: "REJECTED" } : p)
       );
@@ -345,8 +350,8 @@ export default function AdminDashboard() {
                       </div>
                     </td>
                     <td style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "monospace" }}>{s.nis}</td>
-                    <td><span className="badge badge-primary">{s.kelas}</span></td>
-                    <td style={{ fontSize: 13 }}>{s.jurusan ?? "-"}</td>
+                    <td><span className="badge badge-primary">{s.classRoom}</span></td>
+                    <td style={{ fontSize: 13 }}>{s.major ?? "-"}</td>
                     <td><span className="badge badge-success"><CheckCircle size={10} />Aktif</span></td>
                     <td>
                       <Link href="/admin/students" className="btn btn-ghost btn-sm" style={{ padding: "5px 8px" }}>

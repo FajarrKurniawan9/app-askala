@@ -20,12 +20,17 @@ const studentNav: NavItem[] = [
 ];
 
 const adminNav: NavItem[] = [
-  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "Data Siswa", href: "/admin/students", icon: Users },
-  { label: "Verifikasi Bayar", href: "/admin/payments", icon: CreditCard },
-  { label: "Kas Organisasi", href: "/admin/treasury", icon: TrendingUp },
-  { label: "Kegiatan", href: "/admin/activities", icon: FileText },
-  { label: "Pengaturan", href: "/admin/settings", icon: Settings },
+  { label: "Dashboard",        href: "/admin",               icon: LayoutDashboard },
+  { label: "Data Siswa",       href: "/admin/students",      icon: Users },
+  { label: "Prestasi Siswa",   href: "/admin/achievements",  icon: TrendingUp },
+  { label: "Verifikasi Bayar", href: "/admin/payments",      icon: CreditCard },
+  { label: "Kelola Tagihan",   href: "/admin/bills",         icon: CreditCard },
+  { label: "Organisasi",       href: "/admin/organizations", icon: Users },
+  { label: "Manajemen User",   href: "/admin/users",         icon: Users },
+  { label: "Kas Organisasi",   href: "/admin/treasury",      icon: TrendingUp },
+  { label: "Kegiatan",         href: "/admin/activities",    icon: FileText },
+  { label: "Profil Saya",      href: "/admin/profile",       icon: User },
+  { label: "Pengaturan",       href: "/admin/settings",      icon: Settings },
 ];
 
 const parentNav: NavItem[] = [
@@ -151,11 +156,16 @@ export default function Sidebar({ role, userName: userNameProp, sidebarOpen, set
             padding: "10px 12px", borderRadius: 8, marginBottom: 6,
           }}>
             <div style={{
-              width: 34, height: 34, background: color,
-              borderRadius: "50%", display: "flex", alignItems: "center",
-              justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 13, flexShrink: 0,
+              width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+              overflow: "hidden", background: color,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#fff", fontWeight: 700, fontSize: 13,
             }}>
-              {userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()
+              )}
             </div>
             <div style={{ overflow: "hidden" }}>
               <p style={{ fontWeight: 600, fontSize: 13, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>

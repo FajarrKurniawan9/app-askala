@@ -26,6 +26,7 @@ export interface ApiUser {
   email: string;
   phone?: string;
   role: Role;
+  avatarUrl?: string;  // URL foto profil dari Supabase Storage
   createdAt: string;
   updatedAt: string;
 }
@@ -34,8 +35,9 @@ export interface ApiUser {
 export interface ApiStudent {
   id: string;            // UUID
   nis: string;
-  kelas: string;
-  jurusan?: string;
+  classRoom: string;     // Prisma field name (was: kelas)
+  major?: string;        // Prisma field name (was: jurusan)
+  grade?: string;
   address?: string;
   parentId?: string;
   userId: number;
@@ -79,7 +81,8 @@ export interface ApiBill {
   amount: number;        // IDR integer
   dueDate?: string;      // ISO date string
   orgId?: string;
-  organization?: ApiOrganization;
+  org?: ApiOrganization;          // Prisma relation field name
+  organization?: ApiOrganization; // alias kept for backward compat
   createdAt: string;
   updatedAt: string;
 }

@@ -143,11 +143,16 @@ export default function Topbar({ title, subtitle, role, setSidebarOpen }: Topbar
           }}
         >
           <div style={{
-            width: 32, height: 32, background: roleColor,
-            borderRadius: "50%", display: "flex", alignItems: "center",
-            justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 12,
+            width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+            overflow: "hidden", background: roleColor,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "#fff", fontWeight: 700, fontSize: 12,
           }}>
-            {userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()
+            )}
           </div>
           <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }} className="topbar-name">{userName}</span>
           <ChevronDown size={14} color="var(--text-muted)" />

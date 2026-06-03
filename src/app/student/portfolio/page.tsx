@@ -89,7 +89,7 @@ export default function PortfolioPage() {
         setProfile({
           name: `${studentData.user.firstName} ${studentData.user.lastName}`,
           bio: studentData.address || "Siswa aktif yang bersemangat di bidang akademik, organisasi, dan kegiatan ekstrakurikuler.",
-          kelas: studentData.kelas,
+          kelas: studentData.classRoom,
           nis: studentData.nis,
         });
 
@@ -135,7 +135,7 @@ export default function PortfolioPage() {
       await studentService.update(studentProfileId, {
         address: profileForm.bio,
         nis: profileForm.nis,
-        kelas: profileForm.kelas,
+        classRoom: profileForm.kelas,
       });
       setProfile(profileForm);
       setShowProfile(false);

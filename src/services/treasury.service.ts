@@ -1,26 +1,68 @@
 /**
- * Treasury Service — organization cash flow CRUD.
+ * Treasury Service — GET/POST /treasury, GET/PATCH/DELETE /treasury/:id
+ * Handles organization cash flow (income IN / expense OUT).
+ * Filter by orgId: GET /treasury?orgId=UUID
  */
 import api from "@/lib/api";
-import type { Transaction } from "@/lib/types";
+
+export type TreasuryType = "IN" | "OUT";
+
+export interface ApiTreasury {
+  id: string;
+  type: TreasuryType;
+  title: string;
+  amount: number;
+  date: string;           // ISO date string
+  description?: string;
+  createdById: number;    // numeric user ID
+  orgId: string;
+  org?: { id: string; name: string; isActive: boolean };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTreasuryPayload {
+  type: TreasuryType;
+  title: string;
+  amount: number;
+  date: string;
+  orgId: string;
+  createdById: number;
+  description?: string;
+}
+
+export interface UpdateTreasuryPayload {
+  type?: TreasuryType;
+  title?: string;
+  amount?: number;
+  date?: string;
+  orgId?: string;
+  createdById?: number;
+  description?: string;
+}
 
 export const treasuryService = {
-  async getAll(params?: { organization?: string; type?: string }) {
-    const res = await api.get("/treasury", { params });
-    return res.data as Transaction[];
+  async getAll(params?: { orgId?: string }): Promise<ApiTreasury[]> {
+    const res = await api.get<ApiTreasury[]>("/treasury", { params });
+    return res.data;
   },
 
-  async create(payload: Omit<Transaction, "id">) {
-    const res = await api.post("/treasury", payload);
-    return res.data as Transaction;
+  async getById(id: string): Promise<ApiTreasury> {
+    const res = await api.get<ApiTreasury>(`/treasury/${id}`);
+    return res.data;
   },
 
-  async update(id: string, payload: Partial<Transaction>) {
-    const res = await api.put(`/treasury/${id}`, payload);
-    return res.data as Transaction;
+  async create(payload: CreateTreasuryPayload): Promise<ApiTreasury> {
+    const res = await api.post<ApiTreasury>("/treasury", payload);
+    return res.data;
   },
 
-  async remove(id: string) {
+  async update(id: string, payload: UpdateTreasuryPayload): Promise<ApiTreasury> {
+    const res = await api.patch<ApiTreasury>(`/treasury/${id}`, payload);
+    return res.data;
+  },
+
+  async remove(id: string): Promise<void> {
     await api.delete(`/treasury/${id}`);
   },
 };

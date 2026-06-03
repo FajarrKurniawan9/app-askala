@@ -19,6 +19,7 @@ export interface UpdateUserPayload {
   email?: string;
   password?: string;
   phone?: string;
+  avatarUrl?: string;
 }
 
 export const userService = {

@@ -7,9 +7,7 @@ import {
   GraduationCap, ShieldCheck, Users, User, Phone, Hash, CheckCircle2, Sparkles,
 } from "lucide-react";
 import { authService } from "@/services/auth.service";
-import { useAuthStore, getRoleRedirect } from "@/store/authStore";
 import { toast } from "sonner";
-import api from "@/lib/api";
 
 export default function RegisterPage() {
   const [showPass, setShowPass] = useState(false);
@@ -21,7 +19,6 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [nis, setNis] = useState("");
   const [password, setPassword] = useState("");
-  const storeLogin = useAuthStore((s) => s.login);
 
   const roles = [
     { id: "STUDENT" as const, label: "Siswa", icon: GraduationCap },
@@ -56,43 +53,9 @@ export default function RegisterPage() {
         nis: role === "STUDENT" && nis.trim() ? nis.trim() : undefined,
       });
 
-      // 2️⃣ Auto Login setelah registrasi berhasil
-      const loginData = await authService.login({ email, password });
-
-      if (!loginData || !loginData.access_token) {
-        throw new Error("Pendaftaran sukses, namun gagal mengambil token sesi.");
-      }
-
-      // 3️⃣ Simpan token ke localStorage
-      if (typeof window !== "undefined") {
-        localStorage.setItem("askala_token", loginData.access_token);
-      }
-
-      // 🌟 SOLUSI ANTI-RACE CONDITION: Injeksi token langsung ke header default Axios sebelum hit profil
-      if (api.defaults.headers.common) {
-        api.defaults.headers.common["Authorization"] = `Bearer ${loginData.access_token}`;
-      }
-
-      // 4️⃣ Ambil data user via /auth/me menggunakan token baru
-      const user = await authService.me();
-
-      if (!user) {
-        throw new Error("Gagal mengambil data profil baru.");
-      }
-
-      // 5️⃣ Simpan ke Zustand store
-      storeLogin(user, loginData.access_token);
-
-      // 🌟 SOLUSI AMAN UNDEFINED TEXT: Fallback agar teks notifikasi tidak bertuliskan undefined
-      const regDisplayName = user.firstName || user.lastName || user.email?.split("@")[0] || "Pengguna";
-      toast.success(`Akun berhasil dibuat! Selamat datang, ${regDisplayName}!`);
-
-      // 6️⃣ Redirect sesuai role
-      if (user.role) {
-        window.location.href = getRoleRedirect(user.role);
-      } else {
-        window.location.href = "/dashboard";
-      }
+      // 2️⃣ Registrasi berhasil — arahkan ke halaman login
+      toast.success("Akun berhasil dibuat! Silakan login untuk melanjutkan.");
+      window.location.href = "/login";
 
     } catch (err: unknown) {
       console.error("Register Error Log:", err);

@@ -63,7 +63,7 @@ export default function ParentProfilePage() {
     <div style={{ display: "flex" }}>
       <Sidebar role="parent" userName={profile.name} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <div className="main-content" style={{ flex: 1 }}>
-        <Topbar title="Profil Orang Tua" subtitle="Kelola data diri dan akun Anda" role="parent" userName={profile.name} setSidebarOpen={setSidebarOpen} />
+        <Topbar title="Profil Orang Tua" subtitle="Kelola data diri dan akun Anda" role="parent" setSidebarOpen={setSidebarOpen} />
 
         <main style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20, maxWidth: 780 }}>
 

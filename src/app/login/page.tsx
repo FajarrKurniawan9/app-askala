@@ -6,6 +6,7 @@ import { authService } from "@/services/auth.service";
 import { useAuthStore, getRoleRedirect } from "@/store/authStore";
 import { studentService } from "@/services/student.service";
 import { parentService } from "@/services/parent.service";
+import { userService } from "@/services/user.service";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import {
@@ -50,10 +51,19 @@ export default function LoginPage() {
       }
 
       // 3️⃣ Ambil data user via /auth/me menggunakan token yang diinjeksi di atas
-      const user = await authService.me();
+      const meUser = await authService.me();
 
-      if (!user) {
+      if (!meUser) {
         throw new Error("Gagal mengambil informasi profil akun Anda.");
+      }
+
+      // 3b. Fetch data lengkap via /users/:id agar avatarUrl ikut termuat
+      let user = meUser;
+      try {
+        const fullUser = await userService.getById(meUser.id);
+        if (fullUser) user = fullUser;
+      } catch {
+        // fallback ke meUser jika endpoint /users/:id tidak tersedia
       }
 
       // 4️⃣ Simpan ke Zustand store

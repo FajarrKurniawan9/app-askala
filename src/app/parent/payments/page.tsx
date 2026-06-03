@@ -42,7 +42,7 @@ export default function ParentPaymentsPage() {
     <div style={{ display: "flex" }}>
       <Sidebar role="parent" userName="Ibu Kartini" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <div className="main-content" style={{ flex: 1 }}>
-        <Topbar title="Status Pembayaran" subtitle="Riwayat iuran dan tagihan Ahmad Rizky" role="parent" userName="Ibu Kartini" setSidebarOpen={setSidebarOpen} />
+        <Topbar title="Status Pembayaran" subtitle="Riwayat iuran dan tagihan Ahmad Rizky" role="parent" setSidebarOpen={setSidebarOpen} />
 
         <main style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
 

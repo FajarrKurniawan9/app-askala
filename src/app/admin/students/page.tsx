@@ -4,15 +4,16 @@ import Topbar from "@/components/layout/Topbar";
 import { useAdmin } from "@/lib/adminContext";
 import { useAuthStore } from "@/store/authStore";
 import {
-  Users, Plus, Search, Eye, Edit2, Trash2, X,
+  Users, Search, Eye, Edit2, Trash2, X,
   CheckCircle, UserPlus, Download, Loader2,
   GraduationCap, MapPin, Phone, Mail, Hash,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Link as LinkIcon,
 } from "lucide-react";
 import { studentService } from "@/services/student.service";
 import { userService } from "@/services/user.service";
+import { parentService } from "@/services/parent.service";
 import { toast } from "sonner";
-import type { ApiStudent, ApiUser } from "@/lib/types";
+import type { ApiStudent, ApiUser, ApiParent } from "@/lib/types";
 
 // ─── Types ────────────────────────────────────────────────────
 type ModalMode = "add" | "edit" | "view" | "delete" | null;
@@ -38,6 +39,7 @@ interface EditForm {
   major: string;
   grade: string;
   address: string;
+  parentId: string; // UUID of ApiParent, empty string = no parent
 }
 
 const GRADE_OPTIONS = ["X", "XI", "XII"];
@@ -85,6 +87,7 @@ export default function StudentsPage() {
   const { user: authUser } = useAuthStore();
 
   const [students, setStudents]   = useState<ApiStudent[]>([]);
+  const [parents, setParents]     = useState<ApiParent[]>([]);
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
   const [search, setSearch]       = useState("");
@@ -95,15 +98,19 @@ export default function StudentsPage() {
 
   const emptyAdd: AddForm = { firstName: "", lastName: "", email: "", password: "", phone: "", nis: "", classRoom: "", major: "IPA", grade: "X", address: "" };
   const [addForm, setAddForm]     = useState<AddForm>(emptyAdd);
-  const [editForm, setEditForm]   = useState<EditForm>({ nis: "", classRoom: "", major: "", grade: "", address: "" });
+  const [editForm, setEditForm]   = useState<EditForm>({ nis: "", classRoom: "", major: "", grade: "", address: "", parentId: "" });
   const [formError, setFormError] = useState("");
 
   // ── Fetch ──────────────────────────────────────────────────
   const fetchStudents = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await studentService.getAll();
+      const [data, parentData] = await Promise.all([
+        studentService.getAll(),
+        parentService.getAll(),
+      ]);
       setStudents(data);
+      setParents(parentData);
     } catch {
       toast.error("Gagal memuat data siswa.");
     } finally {
@@ -141,7 +148,14 @@ export default function StudentsPage() {
 
   function openEdit(s: ApiStudent) {
     setSelected(s);
-    setEditForm({ nis: s.nis, classRoom: s.classRoom, major: s.major ?? "", grade: s.grade ?? "", address: s.address ?? "" });
+    setEditForm({
+      nis:       s.nis,
+      classRoom: s.classRoom,
+      major:     s.major ?? "",
+      grade:     s.grade ?? "",
+      address:   s.address ?? "",
+      parentId:  s.parentId ?? "",
+    });
     setFormError("");
     setModal("edit");
   }
@@ -201,6 +215,7 @@ export default function StudentsPage() {
         major:     editForm.major || undefined,
         grade:     editForm.grade || undefined,
         address:   editForm.address.trim() || undefined,
+        parentId:  editForm.parentId || undefined,
       });
       setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
       toast.success("Data siswa berhasil diperbarui!");
@@ -281,27 +296,29 @@ export default function StudentsPage() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr style={{ background: "#f8fafc" }}>
-                  {["Siswa", "NIS", "Kelas", "Jurusan", "Status", "Aksi"].map(h => (
+                  {["Siswa", "NIS", "Kelas", "Jurusan", "Orang Tua", "Status", "Aksi"].map(h => (
                     <th key={h} style={{ padding: "11px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--text-muted)", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} style={{ textAlign: "center", padding: 48, color: "var(--text-muted)" }}>
+                  <tr><td colSpan={7} style={{ textAlign: "center", padding: 48, color: "var(--text-muted)" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
                       <Loader2 size={20} color="var(--primary)" style={{ animation: "spin 1s linear infinite" }} />
                       <span>Memuat data siswa...</span>
                     </div>
                   </td></tr>
                 ) : paginated.length === 0 ? (
-                  <tr><td colSpan={6} style={{ textAlign: "center", padding: 48, color: "var(--text-muted)" }}>
+                  <tr><td colSpan={7} style={{ textAlign: "center", padding: 48, color: "var(--text-muted)" }}>
                     <Users size={36} style={{ display: "block", margin: "0 auto 10px", opacity: .25 }} />
                     <p style={{ fontWeight: 600 }}>Tidak ada siswa ditemukan</p>
                     <p style={{ fontSize: 12, marginTop: 4 }}>Coba ubah kata kunci pencarian atau filter kelas</p>
                   </td></tr>
                 ) : paginated.map((s, idx) => {
                   const name = `${s.user?.firstName ?? ""} ${s.user?.lastName ?? ""}`.trim() || "—";
+                  const linkedParent = s.parentId ? parents.find(p => p.id === s.parentId) : null;
+                  const parentName = linkedParent ? `${linkedParent.user?.firstName ?? ""} ${linkedParent.user?.lastName ?? ""}`.trim() : null;
                   const isEven = idx % 2 === 0;
                   return (
                     <tr key={s.id} style={{ background: isEven ? "#fff" : "#fafbfc", borderBottom: "1px solid var(--border)", transition: "background .12s" }}
@@ -322,6 +339,15 @@ export default function StudentsPage() {
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <span style={{ background: "#f1f5f9", color: "var(--text-muted)", borderRadius: 999, padding: "3px 10px", fontSize: 12, fontWeight: 600 }}>{s.major || "—"}</span>
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        {parentName ? (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(217,119,6,.1)", color: "#92400e", borderRadius: 999, padding: "3px 10px", fontSize: 12, fontWeight: 600 }}>
+                            <LinkIcon size={10} /> {parentName}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>—</span>
+                        )}
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "var(--success-light)", color: "#065f46", borderRadius: 999, padding: "3px 10px", fontSize: 12, fontWeight: 600 }}>
@@ -528,6 +554,46 @@ export default function StudentsPage() {
                 </div>
               </div>
 
+              {/* Section: Kaitkan Orang Tua */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <div style={{ width: 6, height: 18, background: "var(--warning)", borderRadius: 3 }} />
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>Kaitkan Orang Tua / Wali</p>
+                </div>
+                <div style={{ position: "relative" }}>
+                  <LinkIcon size={13} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                  <select
+                    className="form-input"
+                    value={editForm.parentId}
+                    onChange={e => setEditForm(f => ({ ...f, parentId: e.target.value }))}
+                    style={{ paddingLeft: 34 }}
+                  >
+                    <option value="">— Tidak ada / Lepaskan kaitan —</option>
+                    {parents.map(p => {
+                      const pName = `${p.user?.firstName ?? ""} ${p.user?.lastName ?? ""}`.trim();
+                      return (
+                        <option key={p.id} value={p.id}>
+                          {pName} ({p.user?.email ?? p.id})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                {editForm.parentId && (() => {
+                  const linkedParent = parents.find(p => p.id === editForm.parentId);
+                  if (!linkedParent) return null;
+                  const pName = `${linkedParent.user?.firstName ?? ""} ${linkedParent.user?.lastName ?? ""}`.trim();
+                  return (
+                    <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "var(--warning-light, #fffbeb)", borderRadius: 8, border: "1px solid rgba(217,119,6,.2)" }}>
+                      <LinkIcon size={13} color="var(--warning)" />
+                      <span style={{ fontSize: 12, color: "var(--warning)", fontWeight: 600 }}>
+                        Akan dikaitkan ke: {pName}
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
+
               {formError && (
                 <div style={{ background: "var(--danger-light)", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "var(--danger)" }}>{formError}</div>
               )}
@@ -582,6 +648,30 @@ export default function StudentsPage() {
                 </div>
               ))}
             </div>
+            {/* Parent info */}
+            {(() => {
+              const linkedParent = selected.parentId ? parents.find(p => p.id === selected.parentId) : null;
+              return (
+                <div style={{ padding: "0 24px 20px" }}>
+                  <div style={{ padding: "12px 16px", background: linkedParent ? "var(--warning-light, #fffbeb)" : "var(--bg)", borderRadius: 10, border: `1px solid ${linkedParent ? "rgba(217,119,6,.2)" : "var(--border)"}`, display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 32, height: 32, background: linkedParent ? "rgba(217,119,6,.15)" : "var(--primary-light)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <LinkIcon size={14} color={linkedParent ? "var(--warning)" : "var(--text-muted)"} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--text-muted)", marginBottom: 2 }}>Orang Tua / Wali</p>
+                      {linkedParent ? (
+                        <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
+                          {`${linkedParent.user?.firstName ?? ""} ${linkedParent.user?.lastName ?? ""}`.trim()}
+                          <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 400, marginLeft: 6 }}>({linkedParent.user?.email})</span>
+                        </p>
+                      ) : (
+                        <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Belum ada orang tua terkait</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             <div style={{ padding: "14px 24px", borderTop: "1px solid var(--border)", display: "flex", gap: 10 }}>
               <button className="btn btn-outline btn-sm" style={{ display: "flex", alignItems: "center", gap: 5 }} onClick={() => openEdit(selected)}>
                 <Edit2 size={13} /> Edit Data

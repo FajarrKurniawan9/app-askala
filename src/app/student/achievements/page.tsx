@@ -57,7 +57,7 @@ export default function AchievementsPage() {
       .then(setItems)
       .catch(() => toast.error("Gagal memuat data prestasi."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [studentProfileId]);
 
   const filtered = useMemo(() => items.filter(a => {
     const matchSearch = a.title.toLowerCase().includes(search.toLowerCase()) ||

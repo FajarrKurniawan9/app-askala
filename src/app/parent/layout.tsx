@@ -14,9 +14,8 @@ function ParentInner({ children }: { children: React.ReactNode }) {
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
       />
-      <div className="main-content" style={{ flex: 1, minWidth: 0 }}>
-        {children}
-      </div>
+      {/* pages render their own main-content wrapper */}
+      {children}
     </div>
   );
 }

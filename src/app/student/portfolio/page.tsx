@@ -301,7 +301,7 @@ export default function PortfolioPage() {
           </div>
           <button onClick={() => window.print()} className="btn btn-ghost btn-sm no-print" style={{ display: "flex", alignItems: "center", gap: 5 }}><FileDown size={14} /> Export PDF</button>
           {tab !== "all" && (
-            <button onClick={() => { setEditItem(null); setAchForm({ title: "", type: "AKADEMIK", level: "KABUPATEN", position: "", organizer: "", date: "", description: "" }); setOrgForm({ orgName: "", role: "", since: "", description: "" }); setEskForm({ name: "", coach: "", role: "", since: "" }); setShowAdd(true); }} className="btn btn-primary btn-sm no-print" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <button onClick={() => { setEditItem(null); setAchForm({ title: "", type: "AKADEMIK", level: "KABUPATEN", position: "", organizer: "", date: "", description: "" }); setOrgForm({ orgId: "", role: "", isActive: true }); setEskForm({ name: "", description: "", schedule: "" }); setShowAdd(true); }} className="btn btn-primary btn-sm no-print" style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <Plus size={14} /> {tab === "achievements" ? "Tambah Prestasi" : tab === "orgs" ? "Tambah Organisasi" : "Tambah Eskul"}
             </button>
           )}

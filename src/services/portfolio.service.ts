@@ -34,8 +34,8 @@ export interface UpdateAchievementPayload {
 }
 
 export const achievementService = {
-  async getAll(): Promise<ApiAchievement[]> {
-    const res = await api.get<ApiAchievement[]>("/achievements");
+  async getAll(params?: { studentId?: string }): Promise<ApiAchievement[]> {
+    const res = await api.get<ApiAchievement[]>("/achievements", { params });
     return res.data;
   },
 

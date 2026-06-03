@@ -5,34 +5,22 @@ import { useStudent } from "@/lib/studentContext";
 import { useAuthStore } from "@/store/authStore";
 import { studentService } from "@/services/student.service";
 import { achievementService } from "@/services/portfolio.service";
+import { studentOrgService, type ApiStudentOrganization } from "@/services/studentOrganization.service";
+import { extracurricularService, type ApiExtracurricular } from "@/services/extracurricular.service";
+import { orgService } from "@/services/portfolio.service";
 import { toast } from "sonner";
 import {
   Plus, Trophy, Users, BookOpen, Upload, Calendar, Search, Trash2, Edit2,
   Award, X, FileDown, CheckCircle, Camera, LayoutGrid, Loader2
 } from "lucide-react";
-import type { ApiAchievement, ApiStudent } from "@/lib/types";
+import type { ApiAchievement, ApiStudent, ApiOrganization } from "@/lib/types";
 import { mapAchievementType, mapAchievementLevel } from "@/lib/mappers";
 
 type Tab = "all" | "achievements" | "orgs" | "eskul";
 
-interface LocalStudentOrg {
-  id: string;
-  studentId: string;
-  orgName: string;
-  role: string;
-  since: string;
-  isActive: boolean;
-  description?: string;
-}
-
-interface LocalExtracurricular {
-  id: string;
-  name: string;
-  role: string;
-  coach?: string;
-  since: string;
-  isActive: boolean;
-}
+// Tipe org form untuk add/edit di portfolio (menggunakan orgId dari org list)
+interface OrgFormData { orgId: string; role: string; isActive: boolean; }
+interface EskulFormData { name: string; description: string; schedule: string; }
 
 const CAT_COLOR: Record<string, string> = {
   AKADEMIK: "badge-primary",
@@ -62,16 +50,17 @@ export default function PortfolioPage() {
   const [search, setSearch] = useState("");
 
   const [achievements, setAchievements] = useState<ApiAchievement[]>([]);
-  const [orgs, setOrgs] = useState<LocalStudentOrg[]>([]);
-  const [eskuls, setEskuls] = useState<LocalExtracurricular[]>([]);
+  const [orgs, setOrgs]   = useState<ApiStudentOrganization[]>([]);
+  const [eskuls, setEskuls] = useState<ApiExtracurricular[]>([]);
+  const [allAvailOrgs, setAllAvailOrgs] = useState<ApiOrganization[]>([]);
 
   const [showAdd, setShowAdd] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
   const [deleteItem, setDeleteItem] = useState<any>(null);
 
   const [achForm, setAchForm] = useState({ title: "", type: "AKADEMIK", level: "KABUPATEN", position: "", organizer: "", date: "", description: "" });
-  const [orgForm, setOrgForm] = useState({ orgName: "", role: "", since: "", description: "" });
-  const [eskForm, setEskForm] = useState({ name: "", coach: "", role: "", since: "" });
+  const [orgForm, setOrgForm] = useState<OrgFormData>({ orgId: "", role: "", isActive: true });
+  const [eskForm, setEskForm] = useState<EskulFormData>({ name: "", description: "", schedule: "" });
 
   // Load profile, achievements, orgs, and eskuls
   useEffect(() => {
@@ -82,9 +71,12 @@ export default function PortfolioPage() {
 
     Promise.all([
       studentService.getById(studentProfileId),
-      achievementService.getAll(),
+      achievementService.getAll({ studentId: studentProfileId }),
+      studentOrgService.getAll(),
+      extracurricularService.getAll(),
+      orgService.getAll(),
     ])
-      .then(([studentData, allAchievements]) => {
+      .then(([studentData, myAchievements, allStudentOrgs, allEskuls, availOrgs]) => {
         setStudent(studentData);
         setProfile({
           name: `${studentData.user.firstName} ${studentData.user.lastName}`,
@@ -92,31 +84,10 @@ export default function PortfolioPage() {
           kelas: studentData.classRoom,
           nis: studentData.nis,
         });
-
-        // Filter achievements for this student
-        const mine = allAchievements.filter(a => a.studentId === studentProfileId);
-        setAchievements(mine);
-
-        // Load extracurriculars from backend student entity
-        const mappedEskuls: LocalExtracurricular[] = ((studentData as any).extracurriculars || []).map((ex: any, idx: number) => ({
-          id: ex.id || `ex-${idx}`,
-          name: ex.name,
-          role: ex.role,
-          coach: ex.coach,
-          since: ex.since,
-          isActive: ex.isActive !== false,
-        }));
-        setEskuls(mappedEskuls);
-
-        // Load orgs from localStorage
-        const savedOrgs = localStorage.getItem(`askala_orgs_${studentProfileId}`);
-        if (savedOrgs) {
-          setOrgs(JSON.parse(savedOrgs));
-        } else {
-          setOrgs([
-            { id: "o1", studentId: studentProfileId, orgName: "OSIS", role: "Ketua Divisi Hubungan Masyarakat", since: "2024-07-15", isActive: true, description: "Mengoordinasikan hubungan eksternal dan publikasi sekolah." },
-          ]);
-        }
+        setAchievements(myAchievements);
+        setOrgs(allStudentOrgs.filter(o => o.studentId === studentProfileId));
+        setEskuls(allEskuls.filter(e => e.studentId === studentProfileId));
+        setAllAvailOrgs(availOrgs.filter(o => o.isActive));
       })
       .catch((err) => {
         console.error(err);
@@ -149,28 +120,15 @@ export default function PortfolioPage() {
     setEditItem(item);
     if (tab === "achievements") {
       setAchForm({
-        title: item.title,
-        type: item.type,
-        level: item.level,
-        position: item.position,
-        organizer: item.organizer,
+        title: item.title, type: item.type, level: item.level,
+        position: item.position, organizer: item.organizer,
         date: item.date ? item.date.split("T")[0] : "",
         description: item.description || "",
       });
     } else if (tab === "orgs") {
-      setOrgForm({
-        orgName: item.orgName,
-        role: item.role,
-        since: item.since,
-        description: item.description || "",
-      });
+      setOrgForm({ orgId: item.orgId, role: item.role, isActive: item.isActive });
     } else if (tab === "eskul") {
-      setEskForm({
-        name: item.name,
-        coach: item.coach || "",
-        role: item.role,
-        since: item.since,
-      });
+      setEskForm({ name: item.name, description: item.description ?? "", schedule: item.schedule ?? "" });
     }
     setShowAdd(true);
   };
@@ -183,67 +141,52 @@ export default function PortfolioPage() {
       if (editItem) {
         if (tab === "achievements") {
           const updated = await achievementService.update(editItem.id, {
-            title: achForm.title,
-            type: achForm.type as any,
-            level: achForm.level as any,
-            position: achForm.position,
-            organizer: achForm.organizer,
-            date: achForm.date,
+            title: achForm.title, type: achForm.type as any, level: achForm.level as any,
+            position: achForm.position, organizer: achForm.organizer, date: achForm.date,
             description: achForm.description || undefined,
           });
           setAchievements(prev => prev.map(a => a.id === editItem.id ? updated : a));
           toast.success("Prestasi berhasil diperbarui!");
         } else if (tab === "orgs") {
-          const updatedOrgs = orgs.map(o => o.id === editItem.id ? { ...o, ...orgForm } : o);
-          setOrgs(updatedOrgs);
-          localStorage.setItem(`askala_orgs_${studentProfileId}`, JSON.stringify(updatedOrgs));
+          const updated = await studentOrgService.update(editItem.id, {
+            role: orgForm.role, isActive: orgForm.isActive,
+          });
+          setOrgs(prev => prev.map(o => o.id === updated.id ? updated : o));
           toast.success("Organisasi berhasil diperbarui!");
         } else if (tab === "eskul") {
-          const updatedEskuls = eskuls.map(ex => ex.id === editItem.id ? { ...ex, ...eskForm } : ex);
-          setEskuls(updatedEskuls);
-          await studentService.update(studentProfileId, { extracurriculars: updatedEskuls });
+          const updated = await extracurricularService.update(editItem.id, {
+            name: eskForm.name,
+            description: eskForm.description || undefined,
+            schedule: eskForm.schedule || undefined,
+          });
+          setEskuls(prev => prev.map(ex => ex.id === updated.id ? updated : ex));
           toast.success("Eskul berhasil diperbarui!");
         }
       } else {
         if (tab === "achievements") {
           const created = await achievementService.create({
             studentId: studentProfileId,
-            title: achForm.title,
-            type: achForm.type as any,
-            level: achForm.level as any,
-            position: achForm.position,
-            organizer: achForm.organizer,
-            date: achForm.date,
+            title: achForm.title, type: achForm.type as any, level: achForm.level as any,
+            position: achForm.position, organizer: achForm.organizer, date: achForm.date,
             description: achForm.description || undefined,
           });
           setAchievements(prev => [created, ...prev]);
           toast.success("Prestasi berhasil ditambahkan!");
         } else if (tab === "orgs") {
-          const newOrg: LocalStudentOrg = {
-            id: `so-${Date.now()}`,
-            studentId: studentProfileId,
-            orgName: orgForm.orgName,
-            role: orgForm.role,
-            since: orgForm.since,
-            isActive: true,
-            description: orgForm.description,
-          };
-          const updatedOrgs = [newOrg, ...orgs];
-          setOrgs(updatedOrgs);
-          localStorage.setItem(`askala_orgs_${studentProfileId}`, JSON.stringify(updatedOrgs));
-          toast.success("Organisasi berhasil ditambahkan!");
+          if (!orgForm.orgId) { toast.error("Pilih organisasi terlebih dahulu."); return; }
+          const created = await studentOrgService.create({
+            studentId: studentProfileId, orgId: orgForm.orgId,
+            role: orgForm.role, isActive: orgForm.isActive,
+          });
+          setOrgs(prev => [created, ...prev]);
+          toast.success("Berhasil bergabung ke organisasi!");
         } else if (tab === "eskul") {
-          const newEskul: LocalExtracurricular = {
-            id: `ex-${Date.now()}`,
-            name: eskForm.name,
-            role: eskForm.role,
-            coach: eskForm.coach,
-            since: eskForm.since,
-            isActive: true,
-          };
-          const updatedEskuls = [newEskul, ...eskuls];
-          setEskuls(updatedEskuls);
-          await studentService.update(studentProfileId, { extracurriculars: updatedEskuls });
+          const created = await extracurricularService.create({
+            name: eskForm.name, studentId: studentProfileId,
+            description: eskForm.description || undefined,
+            schedule: eskForm.schedule || undefined,
+          });
+          setEskuls(prev => [created, ...prev]);
           toast.success("Eskul berhasil ditambahkan!");
         }
       }
@@ -263,14 +206,12 @@ export default function PortfolioPage() {
         setAchievements(prev => prev.filter(a => a.id !== deleteItem.id));
         toast.success("Prestasi berhasil dihapus!");
       } else if (tab === "orgs") {
-        const updatedOrgs = orgs.filter(o => o.id !== deleteItem.id);
-        setOrgs(updatedOrgs);
-        localStorage.setItem(`askala_orgs_${studentProfileId}`, JSON.stringify(updatedOrgs));
+        await studentOrgService.remove(deleteItem.id);
+        setOrgs(prev => prev.filter(o => o.id !== deleteItem.id));
         toast.success("Organisasi berhasil dihapus!");
       } else if (tab === "eskul") {
-        const updatedEskuls = eskuls.filter(ex => ex.id !== deleteItem.id);
-        setEskuls(updatedEskuls);
-        await studentService.update(studentProfileId, { extracurriculars: updatedEskuls });
+        await extracurricularService.remove(deleteItem.id);
+        setEskuls(prev => prev.filter(ex => ex.id !== deleteItem.id));
         toast.success("Eskul berhasil dihapus!");
       }
       setDeleteItem(null);
@@ -280,7 +221,7 @@ export default function PortfolioPage() {
   };
 
   const filtAch = achievements.filter(a => a.title.toLowerCase().includes(search.toLowerCase()));
-  const filtOrg = orgs.filter(o => o.orgName.toLowerCase().includes(search.toLowerCase()));
+  const filtOrg = orgs.filter(o => (o.org?.name ?? "").toLowerCase().includes(search.toLowerCase()));
   const filtEsk = eskuls.filter(e => e.name.toLowerCase().includes(search.toLowerCase()));
 
   if (loading) {
@@ -406,9 +347,9 @@ export default function PortfolioPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 14 }}>
                   {orgs.map(o => (
                     <div key={o.id} className="card" style={{ padding: 16, borderLeft: "3px solid var(--success)" }}>
-                      <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{o.orgName}</p>
-                      <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 6 }}>{o.role} • Sejak {o.since}</p>
-                      {o.description && <p style={{ fontSize: 12, color: "var(--text-body)", lineHeight: 1.5 }}>{o.description}</p>}
+                      <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{o.org?.name ?? "Organisasi"}</p>
+                      <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 6 }}>{o.role}</p>
+                      {o.org?.description && <p style={{ fontSize: 12, color: "var(--text-body)", lineHeight: 1.5 }}>{o.org.description}</p>}
                       <span className={`badge ${o.isActive ? "badge-success" : "badge-gray"}`} style={{ fontSize: 11, marginTop: 8 }}>{o.isActive ? "Aktif" : "Selesai"}</span>
                     </div>
                   ))}
@@ -429,11 +370,8 @@ export default function PortfolioPage() {
                   {eskuls.map(ex => (
                     <div key={ex.id} className="card" style={{ padding: 16, borderLeft: "3px solid var(--warning)" }}>
                       <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{ex.name}</p>
-                      <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>{ex.role}{ex.coach ? ` • Pelatih: ${ex.coach}` : ""}</p>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-                        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Sejak {ex.since}</span>
-                        <span className={`badge ${ex.isActive ? "badge-warning" : "badge-gray"}`} style={{ fontSize: 11 }}>{ex.isActive ? "Aktif" : "Selesai"}</span>
-                      </div>
+                      {ex.schedule && <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>{ex.schedule}</p>}
+                      {ex.description && <p style={{ fontSize: 12, color: "var(--text-body)", lineHeight: 1.5 }}>{ex.description}</p>}
                     </div>
                   ))}
                 </div>
@@ -488,16 +426,16 @@ export default function PortfolioPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ width: 46, height: 46, background: "var(--primary-light)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}><Users size={22} color="var(--primary)" /></div>
-                    <div><h4 style={{ fontSize: 15, fontWeight: 700 }}>{o.orgName}</h4><p style={{ fontSize: 12, color: "var(--text-muted)" }}>{o.role}</p></div>
+                    <div><h4 style={{ fontSize: 15, fontWeight: 700 }}>{o.org?.name ?? "Organisasi"}</h4><p style={{ fontSize: 12, color: "var(--text-muted)" }}>{o.role}</p></div>
                   </div>
                   <div style={{ display: "flex", gap: 4 }}>
                     <button onClick={() => openEdit(o)} className="btn btn-ghost btn-sm" style={{ padding: "5px 8px" }}><Edit2 size={13} /></button>
                     <button onClick={() => setDeleteItem(o)} className="btn btn-ghost btn-sm" style={{ padding: "5px 8px", color: "var(--danger)" }}><Trash2 size={13} /></button>
                   </div>
                 </div>
-                {o.description && <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12, lineHeight: 1.6 }}>{o.description}</p>}
+                {o.org?.description && <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12, lineHeight: 1.6 }}>{o.org.description}</p>}
                 <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Bergabung: <strong>{o.since}</strong></span>
+                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Bergabung: <strong>{o.createdAt?.split("T")[0] ?? "—"}</strong></span>
                   <span className={`badge ${o.isActive ? "badge-success" : "badge-gray"}`}>{o.isActive ? "Aktif" : "Selesai"}</span>
                 </div>
               </div>
@@ -514,22 +452,20 @@ export default function PortfolioPage() {
         {tab === "eskul" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 16 }}>
             {filtEsk.map(ex => (
-              <div key={ex.id} className="card" style={{ padding: 22, borderLeft: `4px solid ${ex.isActive ? "var(--warning)" : "var(--text-muted)"}` }}>
+              <div key={ex.id} className="card" style={{ padding: 22, borderLeft: "4px solid var(--warning)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ width: 40, height: 40, background: "#fef3c7", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}><BookOpen size={18} color="var(--warning)" /></div>
-                    <div><h4 style={{ fontSize: 14, fontWeight: 700 }}>{ex.name}</h4><p style={{ fontSize: 12, color: "var(--text-muted)" }}>{ex.role}</p></div>
+                    <div><h4 style={{ fontSize: 14, fontWeight: 700 }}>{ex.name}</h4>
+                      {ex.schedule && <p style={{ fontSize: 12, color: "var(--text-muted)" }}>{ex.schedule}</p>}
+                    </div>
                   </div>
                   <div style={{ display: "flex", gap: 4 }}>
                     <button onClick={() => openEdit(ex)} className="btn btn-ghost btn-sm" style={{ padding: "5px 8px" }}><Edit2 size={13} /></button>
                     <button onClick={() => setDeleteItem(ex)} className="btn btn-ghost btn-sm" style={{ padding: "5px 8px", color: "var(--danger)" }}><Trash2 size={13} /></button>
                   </div>
                 </div>
-                {ex.coach && <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>Pelatih: <strong>{ex.coach}</strong></p>}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border)", paddingTop: 10 }}>
-                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Sejak {ex.since}</span>
-                  <span className={`badge ${ex.isActive ? "badge-warning" : "badge-gray"}`}>{ex.isActive ? "Aktif" : "Selesai"}</span>
-                </div>
+                {ex.description && <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>{ex.description}</p>}
               </div>
             ))}
             <div onClick={() => { setEditItem(null); setShowAdd(true); }} style={{ border: "2px dashed var(--border)", borderRadius: 12, padding: 24, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, cursor: "pointer", minHeight: 140, transition: "all .15s" }}
@@ -582,12 +518,23 @@ export default function PortfolioPage() {
             )}
             {tab === "orgs" && (
               <form style={{ display: "flex", flexDirection: "column", gap: 14 }} onSubmit={handleAdd}>
-                <div><label className="form-label">Nama Organisasi *</label><input className="form-input" required value={orgForm.orgName} onChange={e => setOrgForm(f => ({ ...f, orgName: e.target.value }))} placeholder="OSIS, Paskibra..." /></div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div><label className="form-label">Jabatan *</label><input className="form-input" required value={orgForm.role} onChange={e => setOrgForm(f => ({ ...f, role: e.target.value }))} placeholder="Anggota / Ketua" /></div>
-                  <div><label className="form-label">Mulai Bergabung *</label><input type="date" className="form-input" required value={orgForm.since} onChange={e => setOrgForm(f => ({ ...f, since: e.target.value }))} /></div>
+                {!editItem && (
+                  <div>
+                    <label className="form-label">Pilih Organisasi *</label>
+                    <select className="form-input" value={orgForm.orgId} onChange={e => setOrgForm(f => ({ ...f, orgId: e.target.value }))} required>
+                      <option value="">— Pilih Organisasi —</option>
+                      {allAvailOrgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label className="form-label">Jabatan *</label>
+                  <input className="form-input" required value={orgForm.role} onChange={e => setOrgForm(f => ({ ...f, role: e.target.value }))} placeholder="Anggota / Ketua / Sekretaris" />
                 </div>
-                <div><label className="form-label">Deskripsi Peran</label><textarea className="form-input" rows={3} value={orgForm.description} onChange={e => setOrgForm(f => ({ ...f, description: e.target.value }))} style={{ resize: "vertical" }} /></div>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <input type="checkbox" id="orgIsActive" checked={orgForm.isActive} onChange={e => setOrgForm(f => ({ ...f, isActive: e.target.checked }))} style={{ width: 16, height: 16, cursor: "pointer", accentColor: "var(--primary)" }} />
+                  <label htmlFor="orgIsActive" style={{ fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Masih aktif sebagai anggota</label>
+                </div>
                 <div style={{ display: "flex", gap: 10 }}>
                   <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => { setShowAdd(false); setEditItem(null); }}>Batal</button>
                   <button type="submit" className="btn btn-primary" style={{ flex: 1 }}><Plus size={14} /> Simpan</button>
@@ -596,12 +543,9 @@ export default function PortfolioPage() {
             )}
             {tab === "eskul" && (
               <form style={{ display: "flex", flexDirection: "column", gap: 14 }} onSubmit={handleAdd}>
-                <div><label className="form-label">Nama Eskul *</label><input className="form-input" required value={eskForm.name} onChange={e => setEskForm(f => ({ ...f, name: e.target.value }))} placeholder="Futsal, Debate..." /></div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div><label className="form-label">Peran</label><input className="form-input" value={eskForm.role} onChange={e => setEskForm(f => ({ ...f, role: e.target.value }))} placeholder="Anggota" /></div>
-                  <div><label className="form-label">Pelatih</label><input className="form-input" value={eskForm.coach} onChange={e => setEskForm(f => ({ ...f, coach: e.target.value }))} placeholder="Nama pelatih" /></div>
-                </div>
-                <div><label className="form-label">Mulai Bergabung</label><input type="date" className="form-input" value={eskForm.since} onChange={e => setEskForm(f => ({ ...f, since: e.target.value }))} /></div>
+                <div><label className="form-label">Nama Eskul *</label><input className="form-input" required value={eskForm.name} onChange={e => setEskForm(f => ({ ...f, name: e.target.value }))} placeholder="Futsal, Debat, KIR..." /></div>
+                <div><label className="form-label">Jadwal</label><input className="form-input" value={eskForm.schedule} onChange={e => setEskForm(f => ({ ...f, schedule: e.target.value }))} placeholder="Setiap Rabu 15:00 WIB" /></div>
+                <div><label className="form-label">Deskripsi</label><textarea className="form-input" rows={3} value={eskForm.description} onChange={e => setEskForm(f => ({ ...f, description: e.target.value }))} style={{ resize: "vertical" }} /></div>
                 <div style={{ display: "flex", gap: 10 }}>
                   <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => { setShowAdd(false); setEditItem(null); }}>Batal</button>
                   <button type="submit" className="btn btn-primary" style={{ flex: 1 }}><Plus size={14} /> Simpan</button>

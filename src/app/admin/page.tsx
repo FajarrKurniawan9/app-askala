@@ -14,7 +14,9 @@ import {
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/lib/api";
+import { treasuryService } from "@/services/treasury.service";
 import type { ApiStudent, ApiSubmission } from "@/lib/types";
+import type { ApiTreasury } from "@/services/treasury.service";
 
 const PIE_COLORS = ["#10B981", "#F59E0B", "#DC2626"];
 
@@ -32,8 +34,10 @@ export default function AdminDashboard() {
   // ── State untuk data dari API ───────────────────────────────
   const [students, setStudents] = useState<ApiStudent[]>([]);
   const [allSubmissions, setAllSubmissions] = useState<ApiSubmission[]>([]);
+  const [treasuryData, setTreasuryData] = useState<ApiTreasury[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [loadingPayments, setLoadingPayments] = useState(true);
+  const [loadingTreasury, setLoadingTreasury] = useState(true);
 
   // ── Fetch semua data siswa dari Backend ──────────────────────
   useEffect(() => {
@@ -49,6 +53,14 @@ export default function AdminDashboard() {
       .then(res => setAllSubmissions(res.data || []))
       .catch(() => setAllSubmissions([]))
       .finally(() => setLoadingPayments(false));
+  }, []);
+
+  // ── Fetch data treasury dari Backend ────────────────────────
+  useEffect(() => {
+    treasuryService.getAll()
+      .then(data => setTreasuryData(data))
+      .catch(() => setTreasuryData([]))
+      .finally(() => setLoadingTreasury(false));
   }, []);
 
   // ── Handle Aksi Verifikasi Pembayaran ───────────────────────
@@ -87,10 +99,10 @@ export default function AdminDashboard() {
   const pendingPaymentsQueue = allSubmissions.filter(p => p.status === "PENDING");
   const totalPending = pendingPaymentsQueue.length;
 
-  // Hitung Total Kas Masuk (Hanya menjumlahkan yang statusnya VERIFIED)
-  const totalKasMasuk = allSubmissions
-    .filter(p => p.status === "VERIFIED")
-    .reduce((sum, current) => sum + (current.bill?.amount || 0), 0);
+  // Hitung Total Kas dari /treasury (IN - OUT)
+  const totalKasIN  = treasuryData.filter(t => t.type === "IN").reduce((s, t) => s + t.amount, 0);
+  const totalKasOUT = treasuryData.filter(t => t.type === "OUT").reduce((s, t) => s + t.amount, 0);
+  const totalKasMasuk = totalKasIN;  // kas masuk total dari treasury
 
   // Total Transaksi Keseluruhan yang tercatat di backend
   const totalTransaksiKeseluruhan = allSubmissions.length;
@@ -106,29 +118,24 @@ export default function AdminDashboard() {
     { name: "Ditolak", value: Math.round((rejectedCount / totalSubmissionsCount) * 100) },
   ];
 
-  // ── Pemrosesan Data Bar Chart Bulanan Otomatis (Tahun 2026) ──
+  // ── Pemrosesan Data Bar Chart Bulanan — dari treasury data ──
   const namaBulan = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
   const monthlyChartData = namaBulan.map((bulan, index) => {
-    // Filter transaksi yang sukses (VERIFIED) berdasarkan bulan dari field createdAt
-    const transaksiBulanIni = allSubmissions.filter(p => {
-      const date = new Date(p.createdAt);
-      return date.getMonth() === index && date.getFullYear() === 2026 && p.status === "VERIFIED";
+    const txBulanIni = treasuryData.filter(t => {
+      const date = new Date(t.date);
+      return date.getMonth() === index;
     });
-
-    const totalPemasukan = transaksiBulanIni.reduce((sum, item) => sum + (item.bill?.amount || 0), 0);
-
     return {
-      bulan: bulan,
-      pemasukan: totalPemasukan,
-      pengeluaran: 0, // Set default 0 karena skema ApiSubmission fokus pada kas masuk/bukti bayar siswa
+      bulan,
+      pemasukan: txBulanIni.filter(t => t.type === "IN").reduce((s, t) => s + t.amount, 0),
     };
   });
 
   const statCards = [
-    { icon: Users, label: "Total Siswa", value: loadingStudents ? "..." : String(totalStudents), sub: "Siswa terdaftar", cls: "", href: "/admin/students" },
-    { icon: AlertCircle, label: "Pembayaran Pending", value: loadingPayments ? "..." : String(totalPending), sub: "Perlu diverifikasi", cls: "card-stat-danger", href: "/admin/payments" },
-    { icon: TrendingUp, label: "Total Kas Masuk", value: loadingPayments ? "..." : formatCurrency(totalKasMasuk), sub: "Akumulasi pembayaran riil", cls: "card-stat-success", href: "/admin/treasury" },
-    { icon: CreditCard, label: "Transaksi Keseluruhan", value: loadingPayments ? "..." : String(totalTransaksiKeseluruhan), sub: "Semua riwayat submit", cls: "", href: "/admin/treasury" },
+    { icon: Users,        label: "Total Siswa",          value: loadingStudents  ? "..." : String(totalStudents),            sub: "Siswa terdaftar",          cls: "",                  href: "/admin/students" },
+    { icon: AlertCircle,  label: "Pembayaran Pending",   value: loadingPayments  ? "..." : String(totalPending),             sub: "Perlu diverifikasi",       cls: "card-stat-danger",  href: "/admin/payments" },
+    { icon: TrendingUp,   label: "Total Kas Masuk",      value: loadingTreasury  ? "..." : formatCurrency(totalKasMasuk),    sub: "Dari transaksi treasury",  cls: "card-stat-success", href: "/admin/treasury" },
+    { icon: CreditCard,   label: "Transaksi Keseluruhan",value: loadingPayments  ? "..." : String(totalTransaksiKeseluruhan),sub: "Semua riwayat submit",     cls: "",                  href: "/admin/payments" },
   ];
 
   return (

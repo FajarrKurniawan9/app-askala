@@ -50,9 +50,10 @@ export default function AchievementsPage() {
   const [form, setForm] = useState(emptyForm);
   const [certFile, setCertFile] = useState<File | null>(null);
 
-  // ── Fetch from backend ──────────────────────────────────────
+  // ── Fetch from backend — filter per student ────────────────
   useEffect(() => {
-    achievementService.getAll()
+    if (!studentProfileId) { setLoading(false); return; }
+    achievementService.getAll({ studentId: studentProfileId })
       .then(setItems)
       .catch(() => toast.error("Gagal memuat data prestasi."))
       .finally(() => setLoading(false));

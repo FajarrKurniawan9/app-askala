@@ -63,8 +63,8 @@ export default function SettingsPage() {
     email:     user?.email     ?? "",
     phone:     user?.phone     ?? "",
   });
-  const [avatarUrl, setAvatarUrl]         = useState<string | null>(user?.avatarUrl ?? null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatarUrl ?? null);
+  // Avatar langsung dari store — persist otomatis
+  const currentAvatarUrl = user?.avatarUrl ?? null;
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -86,32 +86,26 @@ export default function SettingsPage() {
         email:     user.email     ?? "",
         phone:     user.phone     ?? "",
       });
-      // Sync avatar dari store kalau belum ada preview baru
-      if (user.avatarUrl) {
-        setAvatarUrl(user.avatarUrl);
-        setAvatarPreview(user.avatarUrl);
-      }
     }
   }, [user]);
 
   // ── Handle avatar file pick ─────────────────────────────────
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
     if (file.size > 5 * 1024 * 1024) { toast.error("Ukuran file maksimal 5MB."); return; }
-    // Preview
-    setAvatarPreview(URL.createObjectURL(file));
-    // Upload
     setUploadingAvatar(true);
     try {
       const { fileUrl } = await uploadService.uploadFile(file);
-      setAvatarUrl(fileUrl);
-      toast.success("Foto berhasil diunggah! Klik 'Simpan Profil' untuk menyimpan.");
+      await userService.update(user.id, { avatarUrl: fileUrl });
+      const fresh = await userService.getById(user.id);
+      updateUser(fresh);
+      toast.success("Foto profil berhasil diperbarui!");
     } catch {
       toast.error("Gagal mengunggah foto.");
-      setAvatarPreview(null);
     } finally {
       setUploadingAvatar(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -121,14 +115,15 @@ export default function SettingsPage() {
     if (!user) return;
     setSavingProfile(true);
     try {
-      const updated = await userService.update(user.id, {
+      await userService.update(user.id, {
         firstName: profileForm.firstName.trim(),
         lastName:  profileForm.lastName.trim(),
         email:     profileForm.email.trim(),
         phone:     profileForm.phone.trim() || undefined,
-        avatarUrl: avatarUrl ?? undefined,
       });
-      updateUser({ ...updated, avatarUrl: avatarUrl ?? updated.avatarUrl });
+      // Fetch ulang agar avatarUrl tidak hilang
+      const fresh = await userService.getById(user.id);
+      updateUser(fresh);
       toast.success("Profil berhasil disimpan!");
     } catch {
       toast.error("Gagal menyimpan profil. Coba lagi.");
@@ -191,10 +186,11 @@ export default function SettingsPage() {
             <div className="card" style={{ padding: 24, textAlign: "center" }}>
               <div style={{ position: "relative", display: "inline-block", marginBottom: 16 }}>
                 {/* Avatar image or initials */}
-                {(avatarPreview ?? avatarUrl) ? (
+                {currentAvatarUrl ? (
                   <img
-                    src={avatarPreview ?? avatarUrl!}
+                    src={currentAvatarUrl}
                     alt="Avatar"
+                    key={currentAvatarUrl}
                     style={{ width: 84, height: 84, borderRadius: "50%", objectFit: "cover", display: "block", margin: "0 auto" }}
                   />
                 ) : (
@@ -221,10 +217,10 @@ export default function SettingsPage() {
               <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 6 }}>{user?.email}</p>
               <span className="badge badge-danger">Admin</span>
 
-              {avatarPreview && (
+              {currentAvatarUrl && (
                 <div style={{ marginTop: 12 }}>
-                  <p style={{ fontSize: 11, color: "var(--primary)", fontWeight: 600 }}>
-                    Foto baru dipilih. Klik "Simpan Profil" untuk menyimpan.
+                  <p style={{ fontSize: 11, color: "var(--success)", fontWeight: 600, display: "flex", alignItems: "center", gap: 4, justifyContent: "center" }}>
+                    <CheckCircle size={12} /> Foto profil terpasang
                   </p>
                 </div>
               )}

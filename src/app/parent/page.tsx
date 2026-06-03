@@ -74,7 +74,7 @@ export default function ParentDashboard() {
       }
     }
     load();
-  }, [user, parentProfileId, setParentProfileId]);
+  }, [user?.id, parentProfileId]);
 
   const pending   = submissions.filter((s) => s.status === "PENDING");
   const verified  = submissions.filter((s) => s.status === "VERIFIED");

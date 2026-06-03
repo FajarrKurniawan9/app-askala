@@ -94,7 +94,8 @@ export default function AchievementsPage() {
         const created = await achievementService.create({
           studentId: studentProfileId || "",
           title: form.title, type: form.type, level: form.level,
-          position: form.position, organizer: form.organizer, date: form.date,
+          position: form.position, organizer: form.organizer,
+          date: new Date(form.date).toISOString(),
           description: form.description || undefined,
           certificateUrl: certUrl,
         });
@@ -103,7 +104,8 @@ export default function AchievementsPage() {
       } else if (modalMode === "edit" && selected) {
         const updated = await achievementService.update(selected.id, {
           title: form.title, type: form.type, level: form.level,
-          position: form.position, organizer: form.organizer, date: form.date,
+          position: form.position, organizer: form.organizer,
+          date: new Date(form.date).toISOString(),
           description: form.description || undefined,
           ...(certUrl && { certificateUrl: certUrl }),
         });

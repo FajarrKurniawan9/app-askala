@@ -69,7 +69,7 @@ export default function ParentPaymentsPage() {
       }
     }
     load();
-  }, [user, parentProfileId, setParentProfileId]);
+  }, [user?.id, parentProfileId]);
 
   const filtered = useMemo(
     () => submissions.filter((p) => filter === "all" || p.status === filter),

@@ -150,7 +150,8 @@ export default function PortfolioPage() {
         if (tab === "achievements") {
           const updated = await achievementService.update(editItem.id, {
             title: achForm.title, type: achForm.type as any, level: achForm.level as any,
-            position: achForm.position, organizer: achForm.organizer, date: achForm.date,
+            position: achForm.position, organizer: achForm.organizer,
+            date: new Date(achForm.date).toISOString(),
             description: achForm.description || undefined,
           });
           setAchievements(prev => prev.map(a => a.id === editItem.id ? updated : a));

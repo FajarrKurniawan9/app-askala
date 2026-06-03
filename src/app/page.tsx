@@ -243,7 +243,7 @@ const stopDragging = () => {
             borderRadius: 999, padding: "6px 16px", fontSize: 13, fontWeight: 600,
             marginBottom: 28, border: "1px solid rgba(2,126,116,.2)",
           }}>
-            <Zap size={13} />
+          
             Digitalisasi Bhumi Bhawikarsu
           </div>
 <h1

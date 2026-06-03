@@ -107,7 +107,11 @@ export default function StudentsPage() {
     try {
       const [data, parentData] = await Promise.all([
         studentService.getAll(),
-        parentService.getAll(),
+        // Parents mungkin kosong atau endpoint belum ada — jangan gagalkan seluruh load
+        parentService.getAll().catch((err) => {
+          console.warn("[StudentsPage] Gagal fetch parents:", err?.response?.status, err?.message);
+          return [] as import("@/lib/types").ApiParent[];
+        }),
       ]);
       setStudents(data);
       setParents(parentData);
@@ -556,42 +560,56 @@ export default function StudentsPage() {
 
               {/* Section: Kaitkan Orang Tua */}
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <div style={{ width: 6, height: 18, background: "var(--warning)", borderRadius: 3 }} />
-                  <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>Kaitkan Orang Tua / Wali</p>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 6, height: 18, background: "var(--warning)", borderRadius: 3 }} />
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>Kaitkan Orang Tua / Wali</p>
+                  </div>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                    {parents.length === 0 ? "Belum ada akun orang tua" : `${parents.length} akun tersedia`}
+                  </span>
                 </div>
-                <div style={{ position: "relative" }}>
-                  <LinkIcon size={13} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-                  <select
-                    className="form-input"
-                    value={editForm.parentId}
-                    onChange={e => setEditForm(f => ({ ...f, parentId: e.target.value }))}
-                    style={{ paddingLeft: 34 }}
-                  >
-                    <option value="">— Tidak ada / Lepaskan kaitan —</option>
-                    {parents.map(p => {
-                      const pName = `${p.user?.firstName ?? ""} ${p.user?.lastName ?? ""}`.trim();
-                      return (
-                        <option key={p.id} value={p.id}>
-                          {pName} ({p.user?.email ?? p.id})
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-                {editForm.parentId && (() => {
-                  const linkedParent = parents.find(p => p.id === editForm.parentId);
-                  if (!linkedParent) return null;
-                  const pName = `${linkedParent.user?.firstName ?? ""} ${linkedParent.user?.lastName ?? ""}`.trim();
-                  return (
-                    <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "var(--warning-light, #fffbeb)", borderRadius: 8, border: "1px solid rgba(217,119,6,.2)" }}>
-                      <LinkIcon size={13} color="var(--warning)" />
-                      <span style={{ fontSize: 12, color: "var(--warning)", fontWeight: 600 }}>
-                        Akan dikaitkan ke: {pName}
-                      </span>
+
+                {parents.length === 0 ? (
+                  <div style={{ background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#92400e" }}>
+                    ⚠️ Belum ada akun orang tua yang terdaftar. Buat akun dengan role <strong>PARENT</strong> terlebih dahulu via menu <strong>Manajemen User</strong>.
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ position: "relative" }}>
+                      <LinkIcon size={13} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                      <select
+                        className="form-input"
+                        value={editForm.parentId}
+                        onChange={e => setEditForm(f => ({ ...f, parentId: e.target.value }))}
+                        style={{ paddingLeft: 34 }}
+                      >
+                        <option value="">— Tidak ada / Lepaskan kaitan —</option>
+                        {parents.map(p => {
+                          const pName = parentService.getDisplayName(p);
+                          const pEmail = parentService.getEmail(p);
+                          return (
+                            <option key={p.id} value={p.id}>
+                              {pName} — {pEmail}
+                            </option>
+                          );
+                        })}
+                      </select>
                     </div>
-                  );
-                })()}
+                    {editForm.parentId && (() => {
+                      const linkedParent = parents.find(p => p.id === editForm.parentId);
+                      if (!linkedParent) return null;
+                      return (
+                        <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "var(--warning-light, #fffbeb)", borderRadius: 8, border: "1px solid rgba(217,119,6,.2)" }}>
+                          <LinkIcon size={13} color="var(--warning)" />
+                          <span style={{ fontSize: 12, color: "var(--warning)", fontWeight: 600 }}>
+                            Akan dikaitkan ke: {parentService.getDisplayName(linkedParent)}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
               </div>
 
               {formError && (

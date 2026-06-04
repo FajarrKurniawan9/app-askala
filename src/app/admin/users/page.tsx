@@ -12,17 +12,20 @@ import { toast } from "sonner";
 import type { ApiUser, Role } from "@/lib/types";
 
 type ModalMode = "view" | "delete" | null;
-type FilterRole = "all" | Role;
+type FilterRole = "all" | "ADMIN" | "STUDENT" | "PARENT" | "TEACHER";
 const PAGE_SIZE = 12;
 
-const ROLE_CFG: Record<Role, { label: string; bg: string; color: string; icon: React.ElementType }> = {
+// Swagger menunjukkan backend juga punya role TEACHER
+const ROLE_CFG: Record<string, { label: string; bg: string; color: string; icon: React.ElementType }> = {
   ADMIN:   { label: "Admin",     bg: "#fee2e2", color: "#dc2626", icon: ShieldCheck },
   STUDENT: { label: "Siswa",     bg: "#e0f2fe", color: "#0369a1", icon: GraduationCap },
   PARENT:  { label: "Orang Tua", bg: "#dcfce7", color: "#15803d", icon: UserRound },
+  TEACHER: { label: "Guru",      bg: "#fef3c7", color: "#b45309", icon: ShieldCheck },
 };
 
-function UserAvatar({ name, role, size = 36 }: { name: string; role: Role; size?: number }) {
-  const { color, bg } = ROLE_CFG[role];
+function UserAvatar({ name, role, size = 36 }: { name: string; role: string; size?: number }) {
+  const cfg = ROLE_CFG[role] ?? ROLE_CFG["STUDENT"];
+  const { color, bg } = cfg;
   const initials = name.split(" ").filter(Boolean).map(n => n[0]).join("").slice(0, 2).toUpperCase() || "?";
   return (
     <div style={{ width: size, height: size, borderRadius: "50%", background: bg, color, fontWeight: 800, fontSize: size * 0.3, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: `1.5px solid ${color}20` }}>
@@ -164,7 +167,7 @@ export default function UsersPage() {
                   </td></tr>
                 ) : paginated.map((u, idx) => {
                   const name = `${u.firstName} ${u.lastName}`.trim();
-                  const cfg  = ROLE_CFG[u.role];
+                  const cfg = ROLE_CFG[u.role] ?? ROLE_CFG["STUDENT"];
                   const isEven = idx % 2 === 0;
                   return (
                     <tr key={u.id} style={{ background: isEven ? "#fff" : "#fafbfc", borderBottom: "1px solid var(--border)", transition: "background .12s" }}

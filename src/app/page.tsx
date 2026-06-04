@@ -202,16 +202,24 @@ const stopDragging = () => {
           overflow: "hidden"
         }}
       >
-        {/* Background image layer (z-index 0) - responsive */}
-        <div style={{
-          position: "absolute",
-          inset: 0,
-          backgroundImage: "url(/sma3nmalang.svg)",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          opacity: 10,
-        }} />
+        {/* Background video layer (z-index 0) - responsive */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center",
+            zIndex: 0,
+          }}
+        >
+          <source src="/video/SMAN3MALANG.mp4" type="video/mp4" />
+        </video>
 
         {/* Decorative circles (z-index 2) */}
         <div style={{

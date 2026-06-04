@@ -15,7 +15,8 @@ import { submissionService } from "@/services/submission.service";
 import { activityService } from "@/services/activity.service";
 import { mapSubmissionStatus } from "@/lib/mappers";
 import type { ApiParent, ApiStudent, ApiSubmission } from "@/lib/types";
-import type { ApiActivity } from "@/services/activity.service";
+import { progressScoreService } from "@/services/progressScore.service";
+import type { ApiProgressScore } from "@/services/progressScore.service";
 
 const ACTIVITY_COLOR: Record<string, string> = {
   Prestasi: "var(--primary)",

@@ -4,7 +4,7 @@ import Topbar from "@/components/layout/Topbar";
 import { useAdmin } from "@/lib/adminContext";
 import {
   Users, Search, Eye, Trash2, X, Loader2,
-  ShieldCheck, GraduationCap, UserRound,
+  ShieldCheck, GraduationCap, UserRound, BookOpen,
   ChevronLeft, ChevronRight, Mail, Phone, Calendar,
 } from "lucide-react";
 import { userService } from "@/services/user.service";
@@ -20,7 +20,7 @@ const ROLE_CFG: Record<string, { label: string; bg: string; color: string; icon:
   ADMIN:   { label: "Admin",     bg: "#fee2e2", color: "#dc2626", icon: ShieldCheck },
   STUDENT: { label: "Siswa",     bg: "#e0f2fe", color: "#0369a1", icon: GraduationCap },
   PARENT:  { label: "Orang Tua", bg: "#dcfce7", color: "#15803d", icon: UserRound },
-  TEACHER: { label: "Guru",      bg: "#fef3c7", color: "#b45309", icon: ShieldCheck },
+  TEACHER: { label: "Guru",      bg: "#fef3c7", color: "#d97706", icon: BookOpen },
 };
 
 function UserAvatar({ name, role, size = 36 }: { name: string; role: string; size?: number }) {

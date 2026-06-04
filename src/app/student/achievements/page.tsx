@@ -148,6 +148,30 @@ export default function AchievementsPage() {
     </>
   );
 
+  // Profil siswa belum ter-resolve — biasanya karena seeder belum selesai atau akun baru dibuat
+  if (!studentProfileId) return (
+    <>
+      <Topbar title="Prestasi Saya" subtitle="Kelola semua pencapaian akademik & non-akademik" role="student" setSidebarOpen={setSidebarOpen} />
+      <main style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh", padding: 24 }}>
+        <div style={{ textAlign: "center", maxWidth: 400 }}>
+          <div style={{ width: 64, height: 64, background: "var(--warning-light, #fef9c3)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <Trophy size={28} color="#ca8a04" />
+          </div>
+          <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "var(--text-primary)" }}>Profil Siswa Belum Tersedia</h3>
+          <p style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1.7, marginBottom: 20 }}>
+            Data profil siswa belum berhasil dimuat. Ini bisa terjadi jika akun baru saja dibuat atau sesi login sudah habis.
+          </p>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => { window.location.href = "/login"; }}
+          >
+            Login Ulang
+          </button>
+        </div>
+      </main>
+    </>
+  );
+
   return (
     <>
       <Topbar title="Prestasi Saya" subtitle="Kelola semua pencapaian akademik & non-akademik" role="student" setSidebarOpen={setSidebarOpen} />
